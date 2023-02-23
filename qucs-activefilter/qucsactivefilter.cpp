@@ -15,6 +15,8 @@
  *                                                                         *
  ***************************************************************************/
 
+#include <QLocale>
+
 #include "qucsactivefilter.h"
 #include "sallenkey.h"
 #include "mfbfilter.h"
@@ -185,7 +187,7 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
     // do not actually show on screen (yet)
     gpbPar->setAttribute(Qt::WA_DontShowOnScreen);
     // call show() now since we need its actual size later
-    gpbPar->show(); 
+    gpbPar->show();
 
     // second parameters group, below the previous one
     QGroupBox *gpbFunc = new QGroupBox(tr("Transfer function and Topology"));
@@ -210,9 +212,9 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
 
     gpbFunc->setLayout(vl4);
     // do not actually show on screen (yet)
-    gpbFunc->setAttribute(Qt::WA_DontShowOnScreen); 
+    gpbFunc->setAttribute(Qt::WA_DontShowOnScreen);
     // call show() now since we need its actual size later
-    gpbFunc->show(); 
+    gpbFunc->show();
 
     // filter response box, top-right
     QGroupBox *gpbAFR = new QGroupBox(tr("General filter amplitude-frequency response"));
@@ -274,7 +276,6 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
 
 QucsActiveFilter::~QucsActiveFilter()
 {
-    
 }
 
 void QucsActiveFilter::slotCalcSchematic()
@@ -284,13 +285,13 @@ void QucsActiveFilter::slotCalcSchematic()
     FilterParam par;
     if ((cbxResponse->currentIndex()==tLowPass)||
         (cbxResponse->currentIndex()==tHiPass)) {
-       par.Ap = edtA1->text().toFloat();       
-       par.Fc = edtF1->text().toFloat();
-       par.Fs = edtF2->text().toFloat();
+       par.Ap = QLocale::system().toFloat(edtA1->text());
+       par.Fc = QLocale::system().toFloat(edtF1->text());
+       par.Fs = QLocale::system().toFloat(edtF2->text());
     } else {
-       par.Fu = edtF1->text().toFloat();
-       par.Fl = edtF2->text().toFloat();
-       par.TW = edtA1->text().toFloat();
+       par.Fu = QLocale::system().toFloat(edtF1->text());
+       par.Fl = QLocale::system().toFloat(edtF2->text());
+       par.TW = QLocale::system().toFloat(edtA1->text());
 
        if (par.Fl>par.Fu) {
            errorMessage(tr("Upper cutoff frequency of band-pass/band-stop filter is\n"
@@ -299,13 +300,13 @@ void QucsActiveFilter::slotCalcSchematic()
            return;
        }
     }
-    par.As = edtA2->text().toFloat();
-    par.Rp = edtPassbRpl->text().toFloat();
+    par.As = QLocale::system().toFloat(edtA2->text());
+    par.Rp = QLocale::system().toFloat(edtPassbRpl->text());
     if (par.Rp <= 0.0) {
         errorMessage(tr("Passband Ripple is too low (%1)").arg(par.Rp));
         return;
     }
-    double  G = edtKv->text().toFloat();
+    double G = QLocale::system().toFloat(edtKv->text());
     par.Kv = pow(10,G/20.0);
 
     QStringList lst;

@@ -21,19 +21,20 @@
 #include <QtCore>
 #include <cmath>
 #include <complex>
+#include <limits>
 
 static const double pi = 3.1415926535897932384626433832795029;  /* pi   */
 
 struct RC_elements {
-    int   N;
-    double  R1;
-    double  R2;
-    double  R3;
-    double  R4;
-    double  R5;
-    double  R6;
-    double  C1;
-    double  C2;
+    int     N  = 0;
+    double  R1 = ::std::numeric_limits<double>::infinity();
+    double  R2 = ::std::numeric_limits<double>::infinity();
+    double  R3 = ::std::numeric_limits<double>::infinity();
+    double  R4 = ::std::numeric_limits<double>::infinity();
+    double  R5 = ::std::numeric_limits<double>::infinity();
+    double  R6 = ::std::numeric_limits<double>::infinity();
+    double  C1 = 0.0;
+    double  C2 = 0.0;
 };
 
 struct FilterParam {
@@ -82,7 +83,7 @@ protected:
     bool calcCauer();
     bool calcBessel();
     bool calcUserTrFunc();
-    bool checkRCL(); // Checks RCL values. Are one of them NaN or not?
+    void checkRCL(); // Checks RCL values. Are one of them NaN or not?
 
     void createFirstOrderComponentsHPF(QString &s,RC_elements stage, int dx);
     void createFirstOrderComponentsLPF(QString &s,RC_elements stage, int dx);
@@ -110,7 +111,7 @@ public:
 
     virtual void createSchematic(QString &s);
 
-    virtual bool calcFilter();
+    virtual void calcFilter();
 
     void set_TrFunc(QVector<long double> a, QVector<long double> b);
 

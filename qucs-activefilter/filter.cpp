@@ -22,6 +22,10 @@
 #include "filter.h"
 #include "qf_poly.h"
 #include "bessel.h"
+#include "filter-exceptions.h"
+#include <string>
+
+using ::QUCS::Exception::FilterError;
 
 static const int MaxOrder = 50;
 
@@ -32,7 +36,7 @@ Filter::Filter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par)
 
     if ((ftype==Filter::HighPass)||(ftype==Filter::LowPass)) {
         Fc = par.Fc;
-        Fs = par.Fs;        
+        Fs = par.Fs;
         Ap = par.Ap;
     } else {
         Fl = par.Fl;
@@ -49,7 +53,7 @@ Filter::Filter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par)
             double  Fs2lp = fabsf(Fs2 - (F0*F0)/Fs2);
             Fs = std::min(Fs1lp,Fs2lp);
         }
-        Ap = 3.0;        
+        Ap = 3.0;
         qDebug()<<Fc<<Fs;
         Q = F0/fabs(Fu-Fl);
     }
@@ -107,41 +111,40 @@ void Filter::createBandStopSchematic(QString &s)
     s = "<Qucs Schematic " PACKAGE_VERSION ">\n";
 }
 
-bool Filter::calcFilter()
+void Filter::calcFilter()
 {
     Sections.clear();
     Poles.clear();
     Zeros.clear();
-    bool res = false;
 
     switch (ffunc) {
-    case Filter::Chebyshev : res = calcChebyshev();
+    case Filter::Chebyshev : calcChebyshev();
         break;
-    case Filter::Butterworth : res = calcButterworth();
+    case Filter::Butterworth : calcButterworth();
         break;
-    case Filter::Cauer : res = calcCauer();
+    case Filter::Cauer : calcCauer();
         break;
-    case Filter::InvChebyshev : res = calcInvChebyshev();
+    case Filter::InvChebyshev : calcInvChebyshev();
         break;
-    case Filter::Bessel : res = calcBessel();
+    case Filter::Bessel : calcBessel();
         break;
-    case Filter::User : res = calcUserTrFunc();
+    case Filter::User : calcUserTrFunc();
         break;
     default :
-        return false;
-        break;
+        throw FilterError("Internal error: unknown filter function");
     }
-
-    if (!res) return false;
 
     if (Poles.isEmpty()) {
-        return false;
+        throw FilterError("No Poles generated");
     }
 
-    if (((ffunc==Filter::Cauer)||
-         (ffunc==Filter::InvChebyshev))
-            &&(Zeros.isEmpty())) {
-        return false;
+    if (Zeros.isEmpty()) {
+        if (ffunc==Filter::Cauer) {
+            throw FilterError("No Zeroes generated for Cauer filter");
+        }
+        if (ffunc==Filter::InvChebyshev) {
+            throw FilterError("No Zeroes generated for Inverse Chebyshev filter");
+        }
     }
 
     switch (ftype) {
@@ -153,16 +156,16 @@ bool Filter::calcFilter()
         break;
     case Filter::BandStop : calcBandStop();
         break;
-    default: return false;
+    default:
+            throw FilterError("Internal error: unknown filter type");
         break;
     }
 
-    res = checkRCL();
+    checkRCL();
 
     Nr = Nr1*(order/2);
     Nc = Nc1*(order/2);
     Nopamp = Nop1*order/2;
-    return res;
 }
 
 
@@ -216,7 +219,7 @@ void Filter::calcFirstOrder()
             R3 = 0;
         }
         RC_elements curr_stage;
-        curr_stage.N = k;
+        curr_stage.N  = k;
         curr_stage.R1 = 1000*R1;
         curr_stage.R2 = 1000*R2;
         curr_stage.R3 = 1000*R3;
@@ -341,19 +344,34 @@ double Filter::autoscaleCapacitor(double C, QString &suffix)
     return C1;
 }
 
-bool Filter::checkRCL()
+void Filter::checkRCL()
 {
     for (auto &sec : Sections) {
-        if (std::isnan(sec.R1)||
-                std::isnan(sec.R2)||
-                std::isnan(sec.R3)||
-                std::isnan(sec.R4)||
-                std::isnan(sec.C1)||
-                std::isnan(sec.C2)) {
-            return false;
+        if (std::isnan(sec.R1)) {
+            throw FilterError("R1 value is invalid");
+        }
+        if (std::isnan(sec.R2)) {
+            throw FilterError("R2 value is invalid");
+        }
+        if (std::isnan(sec.R3)) {
+            throw FilterError("R3 value is invalid");
+        }
+        if (std::isnan(sec.R4)) {
+            throw FilterError("R4 value is invalid");
+        }
+        if (std::isnan(sec.R5)) {
+            throw FilterError("R5 value is invalid");
+        }
+        if (std::isnan(sec.R6)) {
+            throw FilterError("R6 value is invalid");
+        }
+        if (std::isnan(sec.C1)) {
+            throw FilterError("C1 value is invalid");
+        }
+        if (std::isnan(sec.C2)) {
+            throw FilterError("C2 value is invalid");
         }
     }
-    return true;
 }
 
 bool Filter::calcChebyshev()
@@ -363,6 +381,12 @@ bool Filter::calcChebyshev()
 
     double  N1 = acosh(sqrt((pow(10,0.1*As)-1)/(eps*eps)))/acosh(kf);
     int N = ceil(N1);
+
+    if (N < 1) {
+        ::std::string msg = "Chebyshev Filter: too low order (" + ::std::to_string(N) + ")\n";
+        msg += ::std::string(" o As=") + ::std::to_string(As) + "\n o Rp=" + ::std::to_string(Rp) + "\n o Fs=" + ::std::to_string(Fs) + "\n o Fc=" + ::std::to_string(Fc) + "\n o kf=" + ::std::to_string(kf) + ")";
+        throw FilterError(msg.c_str());
+    }
 
     if (N>MaxOrder) {
         Poles.clear();

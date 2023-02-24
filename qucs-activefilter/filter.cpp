@@ -173,95 +173,109 @@ void Filter::calcFilter()
 
 void Filter::calcHighPass()
 {
-
 }
 
 void Filter::calcLowPass()
 {
-
 }
 
 void Filter::calcBandPass()
 {
-
 }
 
 void Filter::calcBandStop()
 {
-
 }
 
 void Filter::calcFirstOrder()
 {
-    if (order%2 != 0) {
-
-        double  R1, R2,R3;
-
-        int k = order/2 + 1;
-        double  Wc = 2*pi*Fc;
-        double  re = Poles.at(k-1).real();
-        //float im = Poles.at(k-1).imag();
-        //float C = re*re + im*im;
-        double  C = -re;
-        double  C1 = 10/Fc;
-
-        if (ftype==Filter::HighPass) {
-            R1 = 1.0*C/(Wc*C1);
-        } else {
-            R1 = 1.0/(Wc*C*C1);
-        }
-
-        //qDebug()<<C;
-
-        if (Kv != 1.0) {
-            R2 = Kv*R1/(Kv - 1);
-            R3 = Kv*R1;
-        } else {
-            R2 = 1.0;
-            R3 = 0;
-        }
-        RC_elements curr_stage;
-        curr_stage.N  = k;
-        curr_stage.R1 = 1000*R1;
-        curr_stage.R2 = 1000*R2;
-        curr_stage.R3 = 1000*R3;
-        curr_stage.C1 = C1;
-        Sections.append(curr_stage);
-
+    if (order%2 == 0) {
+        return;
     }
 
+    double  R1,R3,R4;
+
+    int k = order/2 + 1;
+    double  Nst = order/2 + order%2;
+    double  Kv1 = pow(Kv,1.0/Nst);
+    double  Wc = 2*pi*Fc;
+    double  re = Poles.at(k-1).real();
+    double  C = -re;
+    double  C1 = 10/Fc;
+
+    if (ftype==Filter::HighPass) {
+        R1 = 1.0*C/(Wc*C1);
+    } else {
+        R1 = 1.0/(Wc*C*C1);
+    }
+
+    if (Kv != 1.0) {
+        R3 = Kv1 * R1/(Kv1 - 1.0);
+        R4 = Kv1 * R1;
+    } else {
+        R3 = ::std::numeric_limits<double>::infinity();
+        R4 = 0;
+    }
+
+    RC_elements curr_stage;
+    curr_stage.N  = k;
+    curr_stage.R1 = 1000*R1;
+    curr_stage.R2 = 0.0;
+    curr_stage.R3 = 1000*R3;
+    curr_stage.R4 = 1000*R4;
+    curr_stage.C1 = C1;
+    curr_stage.Au = Kv1;
+    Sections.append(curr_stage);
 }
 
 void Filter::createPartList(QString & lst)
 {
-    lst = QString(
+    RC_elements stage;
+    unsigned int maxR = 0U;
+    bool hasAu = false;
+
+    foreach (stage, Sections) {
+        double Rv[] { stage.R1, stage.R2, stage.R3, stage.R4, stage.R5, stage.R6 };
+        for (unsigned int i = 0; i < 6; ++i) {
+            if (Rv[i] != ::std::numeric_limits<double>::infinity()) {
+                maxR = i;
+            }
+        }
+        if (stage.Au != 0.0) {
+            hasAu = true;
+        }
+    }
+
+    lst += QString(
         "<table cellpadding=\"6\" cellspacing=\"1\" bgcolor=\"#000000\">"
         "<caption align=\"top\" bgcolor=\"#ffffff\">%1</caption>"
         "<tr bgcolor=\"#ffffff\">"
             "<th style=\"text-align: center\"> %2 </th>"
             "<th style=\"text-align: center\"> C1 </th>"
             "<th style=\"text-align: center\"> C2 </th>"
-            "<th style=\"text-align: center\"> R1 </th>"
-            "<th style=\"text-align: center\"> R2 </th>"
-            "<th style=\"text-align: center\"> R3 </th>"
-            "<th style=\"text-align: center\"> R4 </th>"
-            "<th style=\"text-align: center\"> R5 </th>"
-            "<th style=\"text-align: center\"> R6 </th>"
-        "</tr>"
     ).
         arg(QObject::tr("Part List:")).
         arg(QObject::tr("Stage"));
 
-    RC_elements stage;
+    for (unsigned int i = 0; i <= maxR; ++i) {
+        lst += QString("<th style=\"text-align: center\"> R%1 </th>").arg(i+1);
+    }
+
+    if (hasAu) {
+        lst += QString("<th style=\"text-align: center\"> Au </th>");
+    }
+
+    lst += QString("</tr>");
 
     foreach (stage, Sections) {
+        double Rv[] { stage.R1, stage.R2, stage.R3, stage.R4, stage.R5, stage.R6 };
         auto C = [](double c) {
             if (c == 0.0) {
                 return QString(QObject::tr("not used"));
             }
             QString suffix;
             double result = autoscaleCapacitor(c, suffix);
-            return QString("%1%2").arg(result, 10, 'f', 3).arg(suffix);
+            return QString("%1%2").arg(result, 8, 'f', 3).arg(suffix);
         };
         auto R = [](double r) {
             if (r == ::std::numeric_limits<double>::infinity()) {
@@ -272,7 +286,13 @@ void Filter::createPartList(QString & lst)
             }
             QString suffix;
             double result = autoscaleResistor(r, suffix);
-            return QString("%1%2").arg(result, 10, 'f', 3).arg(suffix);
+            return QString("%1%2").arg(result, 8, 'f', 3).arg(suffix);
+        };
+        auto A = [](double au) {
+            if (au == 0.0) {
+                return QString("unknown");
+            }
+            return QString("%1").arg(au, 5, 'f', 3);
         };
 
         lst += QString(
@@ -280,30 +300,28 @@ void Filter::createPartList(QString & lst)
                 "<td style=\"text-align: center\"> %1 </td>"
                 "<td style=\"text-align: center\"> %2 </td>"
                 "<td style=\"text-align: center\"> %3 </td>"
-                "<td style=\"text-align: center\"> %4 </td>"
-                "<td style=\"text-align: center\"> %5 </td>"
-                "<td style=\"text-align: center\"> %6 </td>"
-                "<td style=\"text-align: center\"> %7 </td>"
-                "<td style=\"text-align: center\"> %8 </td>"
-                "<td style=\"text-align: center\"> %9 </td>"
-            "</tr>"
         ).
             arg(stage.N).
             arg(C(stage.C1)).
-            arg(C(stage.C2)).
-            arg(R(stage.R1)).
-            arg(R(stage.R2)).
-            arg(R(stage.R3)).
-            arg(R(stage.R4)).
-            arg(R(stage.R5)).
-            arg(R(stage.R6));
+            arg(C(stage.C2));
+
+
+        for (unsigned int i = 0; i <= maxR; ++i) {
+            lst += QString("<td style=\"text-align: center\"> %1 </td>").arg(R(Rv[i]));
+        }
+
+        if (hasAu) {
+            lst += QString("<td style=\"text-align: center\"> %1 </td>").arg(A(stage.Au));
+        }
+
+        lst += QString("</tr>");
     }
 
     lst += "</table>\r\n";
 }
 
 void Filter::createPolesZerosList(QString &lst) {
-    lst = QString(QObject::tr("Filter order = %1")).arg(order);
+    lst += QString(QObject::tr("Filter order = %1")).arg(order);
     if (!Zeros.isEmpty()) {
         lst += "\r\n\r\n";
         lst += QObject::tr("Zeros list Pk=Re+j*Im");
@@ -401,13 +419,13 @@ double Filter::autoscaleCapacitor(double C, QString &suffix)
     double C1 = C * 1e-6;
 
     if (C1 >= 1e-6) {
-        suffix = "uF";
+        suffix = "u";
         C1 *= 1e6;
     } else if (C1 >= 1e-9) {
-        suffix = "nF";
+        suffix = "n";
         C1 *= 1e9;
     } else {
-        suffix = "pF";
+        suffix = "p";
         C1 *= 1e12;
     }
 

@@ -35,6 +35,7 @@ struct RC_elements {
     double  R6 = ::std::numeric_limits<double>::infinity();
     double  C1 = 0.0;
     double  C2 = 0.0;
+    double  Au = 0.0;
 };
 
 struct FilterParam {
@@ -107,7 +108,7 @@ public:
     Filter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par);
     virtual ~Filter();
 
-    void calcFirstOrder();
+    virtual void calcFirstOrder();
 
     void createPartList(QString & lst);
     void createPolesZerosList(QString &lst);

@@ -25,14 +25,16 @@
 class MFBfilter : public Filter
 {
 protected:
-    void calcHighPass();
-    void calcLowPass();
-    void calcBandPass();
-    void calcBandStop();
-    void createHighPassSchematic(QString &s);
-    void createLowPassSchematic(QString &s);
-    void createBandPassSchematic(QString &s);
-    void createBandStopSchematic(QString &s);
+    void calcFirstOrder() override;
+
+    void calcHighPass() override;
+    void calcLowPass() override;
+    void calcBandPass() override;
+    void calcBandStop() override;
+    void createHighPassSchematic(QString &s) override;
+    void createLowPassSchematic(QString &s) override;
+    void createBandPassSchematic(QString &s) override;
+    void createBandStopSchematic(QString &s) override;
 
 public:
     MFBfilter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par);

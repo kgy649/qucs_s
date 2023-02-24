@@ -292,11 +292,46 @@ void MFBfilter::calcHighPass()
         curr_stage.R2  = 1000*R2;
         curr_stage.C1 = C1;
         curr_stage.C2 = C2;
+        curr_stage.Au = Kv1;
         Sections.append(curr_stage);
     }
 
-    this->calcFirstOrder();
+    calcFirstOrder();
 
+}
+
+void MFBfilter::calcFirstOrder()
+{
+    if (order%2 == 0) {
+        return;
+    }
+
+    double  R1,R2;
+
+    int k = order/2 + 1;
+    double  Wc = 2*pi*Fc;
+    double  re = Poles.at(k-1).real();
+    double  C = -re;
+    double  C2 = 10.0/Fc;
+
+    if (ftype==Filter::HighPass) {
+        R1 = 1.0*C/(Wc*C2);
+    } else {
+        R1 = 1.0/(Wc*C*C2);
+    }
+
+    double mult = sqrt(Kv);
+    R2 = R1 * mult;
+    R1 = R1 / mult;
+
+    RC_elements curr_stage;
+    curr_stage.N  = k;
+    curr_stage.R1 = 1000*R1;
+    curr_stage.R2 = 1000*R2;
+    curr_stage.R3 = 0.0;
+    curr_stage.C2 = C2;
+    curr_stage.Au = Kv;
+    Sections.append(curr_stage);
 }
 
 void MFBfilter::calcLowPass()
@@ -331,10 +366,11 @@ void MFBfilter::calcLowPass()
         curr_stage.R3 = 1000*R3;
         curr_stage.C1 = C1;
         curr_stage.C2 = C2;
+        curr_stage.Au = Kv1;
         Sections.append(curr_stage);
     }
 
-    this->calcFirstOrder();
+    calcFirstOrder();
 }
 
 void MFBfilter::calcBandPass()
@@ -366,6 +402,7 @@ void MFBfilter::calcBandPass()
         current_section.R3 = 1000*R3;
         current_section.C1 = C1;
         current_section.C2 = C2;
+        current_section.Au = Kv1; // FIXME: ???
         Sections.append(current_section);
     }
 
@@ -400,6 +437,7 @@ void MFBfilter::calcBandPass()
         current_section.R3 = 1000*R3;
         current_section.C1 = C1;
         current_section.C2 = C2;
+        current_section.Au = Kv1; // FIXME: ???
         Sections.append(current_section);
 
         cnt++;
@@ -419,6 +457,7 @@ void MFBfilter::calcBandPass()
         current_section.R3 = 1000*R3;
         current_section.C1 = C1;
         current_section.C2 = C2;
+        current_section.Au = Kv1; // FIXME: ???
         Sections.append(current_section);
 
         cnt++;
@@ -451,6 +490,7 @@ void MFBfilter::calcBandPass()
         current_section.R3 = 1000*R3;
         current_section.C1 = C1;
         current_section.C2 = C2;
+        current_section.Au = Kv1; // FIXME: ???
         Sections.append(current_section);
     }
 }

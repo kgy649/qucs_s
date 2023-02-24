@@ -21,6 +21,7 @@
 
 #include "sallenkey.h"
 #include <iostream>
+#include <limits>
 
 SallenKey::SallenKey(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par) :
     Filter(ffunc_, type_, par)
@@ -53,10 +54,10 @@ void SallenKey::calcLowPass()
         R2 = 1/(C*C1*C2*R1*Wc*Wc);
 
         if (Kv != 1.0) {
-            R3 = Kv1*(R1 + R2)/(Kv1 - 1);
-            R4 = Kv1*(R1 + R2);
+            R3 = 0.01;
+            R4 = R3 * (Kv1 - 1.0);
         } else {
-            R3 = 1;
+            R3 = ::std::numeric_limits<double>::infinity();
             R4 = 0;
         }
 
@@ -68,10 +69,11 @@ void SallenKey::calcLowPass()
         curr_stage.R4 = 1000*R4;
         curr_stage.C1 = C1;
         curr_stage.C2 = C2;
+        curr_stage.Au = Kv1;
         Sections.append(curr_stage);
     }
 
-    this->calcFirstOrder();
+    calcFirstOrder();
 }
 
 
@@ -97,10 +99,10 @@ void SallenKey::calcHighPass()
         R1 = C/(Wc*Wc*C1*C1*R2);
 
         if (Kv != 1.0) {
-            R3 = Kv1*R2/(Kv1 - 1);
-            R4 = Kv1*R2;
+            R3 = 0.01;
+            R4 = R3 * (Kv1 - 1.0);
         } else {
-            R3 = 1;
+            R3 = ::std::numeric_limits<double>::infinity();
             R4 = 0;
         }
 
@@ -112,8 +114,10 @@ void SallenKey::calcHighPass()
         curr_stage.R4 = 1000*R4;
         curr_stage.C1 = C1;
         curr_stage.C2 = C1;
+        curr_stage.Au = Kv1;
         Sections.append(curr_stage);
     }
+
     calcFirstOrder();
 }
 
@@ -148,6 +152,7 @@ void SallenKey::calcBandPass()
         current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C1;
+        current_section.Au = Kv1;
         Sections.append(current_section);
 
         return;
@@ -186,6 +191,7 @@ void SallenKey::calcBandPass()
         current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C1;
+        current_section.Au = Kv1; // FIXME: ???
         Sections.append(current_section);
 
         cnt++;
@@ -207,6 +213,7 @@ void SallenKey::calcBandPass()
         current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C1;
+        current_section.Au = Kv1; // FIXME: ???
         Sections.append(current_section);
 
         cnt++;
@@ -240,6 +247,7 @@ void SallenKey::calcBandPass()
         current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C1;
+        current_section.Au = Kv1; // FIXME: ???
         Sections.append(current_section);
     }
 

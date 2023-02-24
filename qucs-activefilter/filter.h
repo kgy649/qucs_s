@@ -110,7 +110,7 @@ public:
     void calcFirstOrder();
 
     void createPartList(QString & lst);
-    void createPolesZerosList(QStringList &lst);
+    void createPolesZerosList(QString &lst);
 
     virtual void createSchematic(QString &s);
 

@@ -302,24 +302,29 @@ void Filter::createPartList(QString & lst)
     lst += "</table>\r\n";
 }
 
-void Filter::createPolesZerosList(QStringList &lst) {
-    lst << QString(QObject::tr("Filter order = %1")).arg(order);
+void Filter::createPolesZerosList(QString &lst) {
+    lst = QString(QObject::tr("Filter order = %1")).arg(order);
     if (!Zeros.isEmpty()) {
-        lst << "" << QObject::tr("Zeros list Pk=Re+j*Im");
+        lst += "\r\n\r\n";
+        lst += QObject::tr("Zeros list Pk=Re+j*Im");
         for (std::complex<float> zero: Zeros) {
-            lst << QString::number(zero.real()) + " + j*" + QString::number(zero.imag());
+            lst += "\r\n";
+            lst += QString::number(zero.real()) + " + j*" + QString::number(zero.imag());
         }
     }
 
     if ((ftype == Filter::BandPass) || (ftype == Filter::BandStop)) {
-        lst << "" << QObject::tr("LPF prototype poles list Pk=Re+j*Im");
+        lst += "\r\n";
+        lst += QObject::tr("LPF prototype poles list Pk=Re+j*Im");
     } else {
-        lst << "" << QObject::tr("Poles list Pk=Re+j*Im");
+        lst += "\r\n";
+        lst += QObject::tr("Poles list Pk=Re+j*Im");
     }
     for (std::complex<float> pole: Poles) {
-        lst << QString::number(pole.real()) + " + j*" + QString::number(pole.imag());
+        lst += "\r\n";
+        lst += QString::number(pole.real()) + " + j*" + QString::number(pole.imag());
     }
-    lst << "";
+    lst += "\r\n";
 }
 
 void Filter::createFirstOrderComponentsHPF(QString &s,RC_elements stage,int dx)

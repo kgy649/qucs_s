@@ -356,9 +356,10 @@ void QucsActiveFilter::slotCalcSchematic()
                 }
                 SchCauer cauer(ffunc,ftyp,par);
                 cauer.calcFilter();
+                QString lst;
                 cauer.createPolesZerosList(lst);
                 cauer.createPartList(lst);
-                txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
+                txtResult->insertHtml("<pre>" + lst + "</pre>");
                 cauer.createSchematic(s);
             }
             break;
@@ -373,9 +374,10 @@ void QucsActiveFilter::slotCalcSchematic()
                     mfb.set_TrFunc(coeffA,coeffB);
                 }
                 mfb.calcFilter();
+                QString lst;
                 mfb.createPolesZerosList(lst);
                 mfb.createPartList(lst);
-                txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
+                txtResult->insertHtml("<pre>" + lst + "</pre>");
                 mfb.createSchematic(s);
             }
             break;
@@ -385,9 +387,10 @@ void QucsActiveFilter::slotCalcSchematic()
                        sk.set_TrFunc(coeffA,coeffB);
                    }
                    sk.calcFilter();
+                   QString lst;
                    sk.createPolesZerosList(lst);
                    sk.createPartList(lst);
-                   txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
+                   txtResult->insertHtml("<pre>" + lst + "</pre>");
                    sk.createSchematic(s);
             }
             break;
@@ -397,14 +400,14 @@ void QucsActiveFilter::slotCalcSchematic()
         }
 
         statusBar()->showMessage(tr("Filter calculation was successful"), 2000);
-        txtResult->appendHtml("<pre>\r\n" + tr("Filter calculation was successful") + "</pre>");
+        txtResult->insertHtml("<pre>\r\n" + tr("Filter calculation was successful") + "</pre>");
 
         QClipboard *cb = QApplication::clipboard();
         cb->setText(s);
 
     } catch (const FilterError & ex) {
         errorMessage(tr("Filter calculation terminated with error:\n") + ex.what());
-        txtResult->appendHtml(QString("<pre>\r\nError: ") + ex.what() + "</pre>");
+        txtResult->insertHtml(QString("<pre>\r\nError: ") + ex.what() + "</pre>");
     }
 }
 

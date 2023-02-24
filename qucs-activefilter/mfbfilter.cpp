@@ -290,10 +290,6 @@ void MFBfilter::calcHighPass()
         curr_stage.N = k;
         curr_stage.R1 = 1000*R1;
         curr_stage.R2  = 1000*R2;
-        curr_stage.R3 = 0;
-        curr_stage.R4 = 0;
-        curr_stage.R5 = 0;
-        curr_stage.R6 = 0;
         curr_stage.C1 = C1;
         curr_stage.C2 = C2;
         Sections.append(curr_stage);
@@ -329,13 +325,10 @@ void MFBfilter::calcLowPass()
         R3 = 1.0/(C*C1*C2*Wc*Wc*R2);
 
         RC_elements curr_stage;
-        curr_stage.N = k;
+        curr_stage.N  = k;
         curr_stage.R1 = 1000*R1;
-        curr_stage.R2  = 1000*R2;
+        curr_stage.R2 = 1000*R2;
         curr_stage.R3 = 1000*R3;
-        curr_stage.R4 = 0;
-        curr_stage.R5 = 0;
-        curr_stage.R6 = 0;
         curr_stage.C1 = C1;
         curr_stage.C2 = C2;
         Sections.append(curr_stage);
@@ -371,9 +364,6 @@ void MFBfilter::calcBandPass()
         current_section.R1 = 1000*R1;
         current_section.R2 = 1000*R2;
         current_section.R3 = 1000*R3;
-        current_section.R4 = 0;
-        current_section.R5 = 0;
-        current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C2;
         Sections.append(current_section);
@@ -408,9 +398,6 @@ void MFBfilter::calcBandPass()
         current_section.R1 = 1000*R1;
         current_section.R2 = 1000*R2;
         current_section.R3 = 1000*R3;
-        current_section.R4 = 0;
-        current_section.R5 = 0;
-        current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C2;
         Sections.append(current_section);
@@ -430,9 +417,6 @@ void MFBfilter::calcBandPass()
         current_section.R1 = 1000*R1;
         current_section.R2 = 1000*R2;
         current_section.R3 = 1000*R3;
-        current_section.R4 = 0;
-        current_section.R5 = 0;
-        current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C2;
         Sections.append(current_section);
@@ -465,9 +449,6 @@ void MFBfilter::calcBandPass()
         current_section.R1 = 1000*R1;
         current_section.R2 = 1000*R2;
         current_section.R3 = 1000*R3;
-        current_section.R4 = 0;
-        current_section.R5 = 0;
-        current_section.R6 = 0;
         current_section.C1 = C1;
         current_section.C2 = C2;
         Sections.append(current_section);

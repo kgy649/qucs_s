@@ -23,6 +23,8 @@
 #include "qf_poly.h"
 #include "bessel.h"
 
+#include <limits>
+
 static const int MaxOrder = 50;
 
 Filter::Filter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par)
@@ -32,7 +34,7 @@ Filter::Filter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par)
 
     if ((ftype==Filter::HighPass)||(ftype==Filter::LowPass)) {
         Fc = par.Fc;
-        Fs = par.Fs;        
+        Fs = par.Fs;
         Ap = par.Ap;
     } else {
         Fl = par.Fl;
@@ -49,7 +51,7 @@ Filter::Filter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par)
             double  Fs2lp = fabsf(Fs2 - (F0*F0)/Fs2);
             Fs = std::min(Fs1lp,Fs2lp);
         }
-        Ap = 3.0;        
+        Ap = 3.0;
         qDebug()<<Fc<<Fs;
         Q = F0/fabs(Fu-Fl);
     }
@@ -216,41 +218,85 @@ void Filter::calcFirstOrder()
             R3 = 0;
         }
         RC_elements curr_stage;
-        curr_stage.N = k;
+        curr_stage.N  = k;
         curr_stage.R1 = 1000*R1;
         curr_stage.R2 = 1000*R2;
         curr_stage.R3 = 1000*R3;
-        curr_stage.R4 = 0;
         curr_stage.C1 = C1;
-        curr_stage.C2 = 0;
         Sections.append(curr_stage);
 
     }
 
 }
 
-void Filter::createPartList(QStringList &lst) {
-    lst << QObject::tr("Part list");
-    lst << "Stage# C1(uF) C2(uF) R1(kOhm) R2(kOhm) R3(kOhm) R4(kOhm)  R5(kOhm) R6(kOhm)";
+void Filter::createPartList(QString & lst)
+{
+    lst = QString(
+        "<table cellpadding=\"6\" cellspacing=\"1\" bgcolor=\"#000000\">"
+        "<caption align=\"top\" bgcolor=\"#ffffff\">%1</caption>"
+        "<tr bgcolor=\"#ffffff\">"
+            "<th style=\"text-align: center\"> %2 </th>"
+            "<th style=\"text-align: center\"> C1 </th>"
+            "<th style=\"text-align: center\"> C2 </th>"
+            "<th style=\"text-align: center\"> R1 </th>"
+            "<th style=\"text-align: center\"> R2 </th>"
+            "<th style=\"text-align: center\"> R3 </th>"
+            "<th style=\"text-align: center\"> R4 </th>"
+            "<th style=\"text-align: center\"> R5 </th>"
+            "<th style=\"text-align: center\"> R6 </th>"
+        "</tr>"
+    ).
+        arg(QObject::tr("Part List:")).
+        arg(QObject::tr("Stage"));
 
-    for (const auto &stage: Sections) {
-        QString suff1, suff2;
-        double C1 = autoscaleCapacitor(stage.C1, suff1);
-        double C2 = autoscaleCapacitor(stage.C2, suff2);
+    RC_elements stage;
 
-        lst << QString("%1%2%3%4%5%6%7%8%9%10%11")
-                .arg(stage.N, 6)
-                .arg(C1, 10, 'f', 3)
-                .arg(suff1)
-                .arg(C2, 10, 'f', 3)
-                .arg(suff2)
-                .arg(stage.R1, 10, 'f', 3)
-                .arg(stage.R2, 10, 'f', 3)
-                .arg(stage.R3, 10, 'f', 3)
-                .arg(stage.R4, 10, 'f', 3)
-                .arg(stage.R5, 10, 'f', 3)
-                .arg(stage.R6, 10, 'f', 3);
+    foreach (stage, Sections) {
+        auto C = [](double c) {
+            if (c == 0.0) {
+                return QString(QObject::tr("not used"));
+            }
+            QString suffix;
+            double result = autoscaleCapacitor(c, suffix);
+            return QString("%1%2").arg(result, 10, 'f', 3).arg(suffix);
+        };
+        auto R = [](double r) {
+            if (r == ::std::numeric_limits<double>::infinity()) {
+                return QString(QObject::tr("not used"));
+            }
+            if (r == 0.0) {
+                return QString(QObject::tr("short"));
+            }
+            QString suffix;
+            double result = autoscaleResistor(r, suffix);
+            return QString("%1%2").arg(result, 10, 'f', 3).arg(suffix);
+        };
+
+        lst += QString(
+            "<tr bgcolor=\"#ffffff\">"
+                "<td style=\"text-align: center\"> %1 </td>"
+                "<td style=\"text-align: center\"> %2 </td>"
+                "<td style=\"text-align: center\"> %3 </td>"
+                "<td style=\"text-align: center\"> %4 </td>"
+                "<td style=\"text-align: center\"> %5 </td>"
+                "<td style=\"text-align: center\"> %6 </td>"
+                "<td style=\"text-align: center\"> %7 </td>"
+                "<td style=\"text-align: center\"> %8 </td>"
+                "<td style=\"text-align: center\"> %9 </td>"
+            "</tr>"
+        ).
+            arg(stage.N).
+            arg(C(stage.C1)).
+            arg(C(stage.C2)).
+            arg(R(stage.R1)).
+            arg(R(stage.R2)).
+            arg(R(stage.R3)).
+            arg(R(stage.R4)).
+            arg(R(stage.R5)).
+            arg(R(stage.R6));
     }
+
+    lst += "</table>\r\n";
 }
 
 void Filter::createPolesZerosList(QStringList &lst) {
@@ -320,24 +366,43 @@ void Filter::createFirstOrderWires(QString &s, int dx, int y)
 }
 
 
+double Filter::autoscaleResistor(double R, QString & suffix)
+{
+    if (R == ::std::numeric_limits<double>::infinity()) {
+        suffix = "";
+        return R;
+    }
+
+    double R1 = R * 1e3;
+
+    if (R1 >= 1e6) {
+        suffix = "M";
+        R1 *= 1e-6;
+    } else if (R1 >= 1e3) {
+        suffix = "k";
+        R1 *= 1e-3;
+    } else {
+        suffix = "";
+    }
+
+    return R1;
+}
+
 double Filter::autoscaleCapacitor(double C, QString &suffix)
 {
-    double  C1 = C*1e-6;
+    double C1 = C * 1e-6;
 
-    if (C1>=1e-7) {
+    if (C1 >= 1e-6) {
         suffix = "uF";
         C1 *= 1e6;
-    }
-
-    if ((C1<1e-7)&&(C1>=1e-8)) {
+    } else if (C1 >= 1e-9) {
         suffix = "nF";
         C1 *= 1e9;
-    }
-
-    if (C1<1e-8) {
+    } else {
         suffix = "pF";
         C1 *= 1e12;
     }
+
     return C1;
 }
 
@@ -651,3 +716,4 @@ void Filter::set_TrFunc(QVector<long double> a, QVector<long double> b)
     vec_A = a;
     vec_B = b;
 }
+

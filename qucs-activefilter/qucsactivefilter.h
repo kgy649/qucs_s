@@ -25,8 +25,10 @@
 #include <QtCore>
 #include <QtWidgets>
 #include <QSvgWidget>
+#include <QTextEdit>
 
 #include <complex>
+
 #include "filter.h"
 
 struct tQucsSettings {
@@ -80,7 +82,7 @@ private:
 
     QGroupBox *gpbCons;
     QAction *viewConsole;
-    QPlainTextEdit *txtResult;
+    QTextEdit *txtResult;
 
     QSvgWidget *imgAFR;
     QLabel *lblSch;

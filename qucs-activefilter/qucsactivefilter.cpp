@@ -132,7 +132,7 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
     btnCalcSchematic = new QPushButton(tr("Calculate and copy to clipboard"));
     connect(btnCalcSchematic,SIGNAL(clicked()),SLOT(slotCalcSchematic()));
 
-    txtResult = new QPlainTextEdit;
+    txtResult = new QTextEdit;
     txtResult->setReadOnly(true);
     txtResult->setWordWrapMode(QTextOption::NoWrap);
 
@@ -272,7 +272,6 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
 
 QucsActiveFilter::~QucsActiveFilter()
 {
-    
 }
 
 void QucsActiveFilter::slotCalcSchematic()
@@ -282,7 +281,7 @@ void QucsActiveFilter::slotCalcSchematic()
     FilterParam par;
     if ((cbxResponse->currentIndex()==tLowPass)||
         (cbxResponse->currentIndex()==tHiPass)) {
-       par.Ap = edtA1->text().toFloat();       
+       par.Ap = edtA1->text().toFloat();
        par.Fc = edtF1->text().toFloat();
        par.Fs = edtF2->text().toFloat();
     } else {
@@ -302,7 +301,6 @@ void QucsActiveFilter::slotCalcSchematic()
     double  G = edtKv->text().toFloat();
     par.Kv = pow(10,G/20.0);
 
-    QStringList lst;
     Filter::FilterFunc ffunc;
 
     switch (cbxFilterFunc->currentIndex()) {
@@ -348,11 +346,13 @@ void QucsActiveFilter::slotCalcSchematic()
                  (ftyp==Filter::BandStop))) {
                    SchCauer cauer(ffunc,ftyp,par);
                    ok = cauer.calcFilter();
-                   cauer.createPolesZerosList(lst);
-                   cauer.createPartList(lst);
-		   txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
                    if (ok) {
                        cauer.createSchematic(s);
+                       QStringList lst;
+                       cauer.createPolesZerosList(lst);
+                       QString tbl;
+                       cauer.createPartList(tbl);
+                       txtResult->insertHtml("<pre>" + lst.join("\n") + "</pre>" + tbl);
                    } else {
                        errorMessage(tr("Unable to implement filter with such parameters and topology \n"
                                        "Change parameters and/or topology and try again!"));
@@ -371,11 +371,13 @@ void QucsActiveFilter::slotCalcSchematic()
                         mfb.set_TrFunc(coeffA,coeffB);
                     }
                     ok = mfb.calcFilter();
-                    mfb.createPolesZerosList(lst);
-                    mfb.createPartList(lst);
-                    txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
                     if (ok) {
                         mfb.createSchematic(s);
+                        QStringList lst;
+                        mfb.createPolesZerosList(lst);
+                        QString tbl;
+                        mfb.createPartList(tbl);
+                        txtResult->insertHtml("<pre>" + lst.join("\n") + "</pre>" + tbl);
                     } else {
                         errorMessage(tr("Unable to implement filter with such parameters and topology \n"
                                         "Change parameters and/or topology and try again!"));
@@ -392,11 +394,13 @@ void QucsActiveFilter::slotCalcSchematic()
                    sk.set_TrFunc(coeffA,coeffB);
                }
                ok = sk.calcFilter();
-               sk.createPolesZerosList(lst);
-               sk.createPartList(lst);
-	       txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
                if (ok) {
                    sk.createSchematic(s);
+                   QStringList lst;
+                   sk.createPolesZerosList(lst);
+                   QString tbl;
+                   sk.createPartList(tbl);
+                   txtResult->insertHtml("<pre>" + lst.join("\n") + "</pre>" + tbl);
                } else {
                    errorMessage(tr("Unable to implement filter with such parameters and topology \n"
                                    "Change parameters and/or topology and try again!"));
@@ -409,13 +413,13 @@ void QucsActiveFilter::slotCalcSchematic()
 
     if (ok) {
       statusBar()->showMessage(tr("Filter calculation was successful"), 2000);
-        txtResult->appendHtml("<pre>\r\n" + 
-			      tr("Filter calculation was successful") +
+        txtResult->insertHtml("<pre><br><br>" + 
+			      tr("Filter calculation was successful.") +
 			      "</pre>");
     } else {
       statusBar()->showMessage(tr("Filter calculation terminated with error!"), 2000);
-        txtResult->appendHtml("<pre>\r\n" +
-			      tr("Filter calculation terminated with error") +
+        txtResult->insertHtml("<pre>\r\n" +
+			      tr("Filter calculation terminated with error.") +
 			      "</pre>");
     }
 

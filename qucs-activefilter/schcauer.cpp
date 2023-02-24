@@ -59,13 +59,12 @@ void SchCauer::calcLowPass()
         R4 = (Kv1*C*R5)/A;
 
         RC_elements curr_sec;
-        curr_sec.N = k;
+        curr_sec.N  = k;
         curr_sec.R1 = 1000*R1;
-        curr_sec.R2  = 1000*R2;
+        curr_sec.R2 = 1000*R2;
         curr_sec.R3 = 1000*R3;
         curr_sec.R4 = 1000*R4;
         curr_sec.R5 = 1000*R5;
-        curr_sec.R6 = 0;
         curr_sec.C1 = C1;
         curr_sec.C2 = C2;
         Sections.append(curr_sec);
@@ -102,13 +101,12 @@ void SchCauer::calcHighPass()
         R4 = Kv1*R5;
 
         RC_elements curr_sec;
-        curr_sec.N = k;
+        curr_sec.N  = k;
         curr_sec.R1 = 1000*R1;
-        curr_sec.R2  = 1000*R2;
+        curr_sec.R2 = 1000*R2;
         curr_sec.R3 = 1000*R3;
         curr_sec.R4 = 1000*R4;
         curr_sec.R5 = 1000*R5;
-        curr_sec.R6 = 0;
         curr_sec.C1 = C1;
         curr_sec.C2 = C2;
         Sections.append(curr_sec);

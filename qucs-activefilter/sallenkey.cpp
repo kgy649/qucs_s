@@ -61,13 +61,11 @@ void SallenKey::calcLowPass()
         }
 
         RC_elements curr_stage;
-        curr_stage.N = k;
+        curr_stage.N  = k;
         curr_stage.R1 = 1000*R1;
-        curr_stage.R2  = 1000*R2;
+        curr_stage.R2 = 1000*R2;
         curr_stage.R3 = 1000*R3;
         curr_stage.R4 = 1000*R4;
-        curr_stage.R5 = 0;
-        curr_stage.R6 = 0;
         curr_stage.C1 = C1;
         curr_stage.C2 = C2;
         Sections.append(curr_stage);
@@ -107,13 +105,11 @@ void SallenKey::calcHighPass()
         }
 
         RC_elements curr_stage;
-        curr_stage.N = k;
+        curr_stage.N  = k;
         curr_stage.R1 = 1000*R1;
-        curr_stage.R2  = 1000*R2;
+        curr_stage.R2 = 1000*R2;
         curr_stage.R3 = 1000*R3;
         curr_stage.R4 = 1000*R4;
-        curr_stage.R5 = 0;
-        curr_stage.R6 = 0;
         curr_stage.C1 = C1;
         curr_stage.C2 = C1;
         Sections.append(curr_stage);

@@ -15,6 +15,8 @@
  *                                                                         *
  ***************************************************************************/
 
+#include <QLocale>
+
 #include "qucsactivefilter.h"
 #include "sallenkey.h"
 #include "mfbfilter.h"
@@ -24,7 +26,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include "filter-exceptions.h"
 
+using ::QUCS::Exception::FilterError;
 
 QucsActiveFilter::QucsActiveFilter(QWidget *parent)
     : QMainWindow(parent)
@@ -183,7 +187,7 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
     // do not actually show on screen (yet)
     gpbPar->setAttribute(Qt::WA_DontShowOnScreen);
     // call show() now since we need its actual size later
-    gpbPar->show(); 
+    gpbPar->show();
 
     // second parameters group, below the previous one
     QGroupBox *gpbFunc = new QGroupBox(tr("Transfer function and Topology"));
@@ -208,9 +212,9 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
 
     gpbFunc->setLayout(vl4);
     // do not actually show on screen (yet)
-    gpbFunc->setAttribute(Qt::WA_DontShowOnScreen); 
+    gpbFunc->setAttribute(Qt::WA_DontShowOnScreen);
     // call show() now since we need its actual size later
-    gpbFunc->show(); 
+    gpbFunc->show();
 
     // filter response box, top-right
     QGroupBox *gpbAFR = new QGroupBox(tr("General filter amplitude-frequency response"));
@@ -281,13 +285,13 @@ void QucsActiveFilter::slotCalcSchematic()
     FilterParam par;
     if ((cbxResponse->currentIndex()==tLowPass)||
         (cbxResponse->currentIndex()==tHiPass)) {
-       par.Ap = edtA1->text().toFloat();
-       par.Fc = edtF1->text().toFloat();
-       par.Fs = edtF2->text().toFloat();
+       par.Ap = QLocale::system().toFloat(edtA1->text());
+       par.Fc = QLocale::system().toFloat(edtF1->text());
+       par.Fs = QLocale::system().toFloat(edtF2->text());
     } else {
-       par.Fu = edtF1->text().toFloat();
-       par.Fl = edtF2->text().toFloat();
-       par.TW = edtA1->text().toFloat();
+       par.Fu = QLocale::system().toFloat(edtF1->text());
+       par.Fl = QLocale::system().toFloat(edtF2->text());
+       par.TW = QLocale::system().toFloat(edtA1->text());
 
        if (par.Fl>par.Fu) {
            errorMessage(tr("Upper cutoff frequency of band-pass/band-stop filter is\n"
@@ -296,9 +300,13 @@ void QucsActiveFilter::slotCalcSchematic()
            return;
        }
     }
-    par.As = edtA2->text().toFloat();
-    par.Rp = edtPassbRpl->text().toFloat();
-    double  G = edtKv->text().toFloat();
+    par.As = QLocale::system().toFloat(edtA2->text());
+    par.Rp = QLocale::system().toFloat(edtPassbRpl->text());
+    if (par.Rp <= 0.0) {
+        errorMessage(tr("Passband Ripple is too low (%1)").arg(par.Rp));
+        return;
+    }
+    double G = QLocale::system().toFloat(edtKv->text());
     par.Kv = pow(10,G/20.0);
 
     Filter::FilterFunc ffunc;
@@ -337,95 +345,67 @@ void QucsActiveFilter::slotCalcSchematic()
     }
 
     QString s;
-    bool ok = false;
 
-    switch (cbxFilterType->currentIndex()) {
-    case topoCauer : {
-            if (((ffunc==Filter::InvChebyshev)||
-                 (ffunc==Filter::Cauer)||
-                 (ftyp==Filter::BandStop))) {
-                   SchCauer cauer(ffunc,ftyp,par);
-                   ok = cauer.calcFilter();
-                   if (ok) {
-                       cauer.createSchematic(s);
-                       QStringList lst;
-                       cauer.createPolesZerosList(lst);
-                       QString tbl;
-                       cauer.createPartList(tbl);
-                       txtResult->insertHtml("<pre>" + lst.join("\n") + "</pre>" + tbl);
-                   } else {
-                       errorMessage(tr("Unable to implement filter with such parameters and topology \n"
-                                       "Change parameters and/or topology and try again!"));
+    try {
+        switch (cbxFilterType->currentIndex()) {
+            case topoCauer : {
+                if (!((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)||(ftyp==Filter::BandStop))) {
+                    throw FilterError(
+                        "Unable to use Cauer section for Chebyshev or Butterworth \n"
+                        "frequency response. Try to use another topology.");
+                }
+                SchCauer cauer(ffunc,ftyp,par);
+                cauer.calcFilter();
+                cauer.createPolesZerosList(lst);
+                cauer.createPartList(lst);
+                txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
+                cauer.createSchematic(s);
+            }
+            break;
+            case topoMFB : {
+                if ((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)) {
+                    throw FilterError(
+                        "Unable to use MFB filter for Cauer or Inverse Chebyshev \n"
+                        "frequency response. Try to use another topology.");
+                }
+                MFBfilter mfb(ffunc,ftyp,par);
+                if (ffunc==Filter::User) {
+                    mfb.set_TrFunc(coeffA,coeffB);
+                }
+                mfb.calcFilter();
+                mfb.createPolesZerosList(lst);
+                mfb.createPartList(lst);
+                txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
+                mfb.createSchematic(s);
+            }
+            break;
+            case topoSallenKey : {
+                   SallenKey sk(ffunc,ftyp,par);
+                   if (ffunc==Filter::User) {
+                       sk.set_TrFunc(coeffA,coeffB);
                    }
-                } else {
-                    errorMessage(tr("Unable to use Cauer section for Chebyshev or Butterworth \n"
-                                 "frequency response. Try to use another topology."));
-                }
-             }
-
-             break;
-    case topoMFB : {
-                if (!((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer))) {
-                    MFBfilter mfb(ffunc,ftyp,par);
-                    if (ffunc==Filter::User) {
-                        mfb.set_TrFunc(coeffA,coeffB);
-                    }
-                    ok = mfb.calcFilter();
-                    if (ok) {
-                        mfb.createSchematic(s);
-                        QStringList lst;
-                        mfb.createPolesZerosList(lst);
-                        QString tbl;
-                        mfb.createPartList(tbl);
-                        txtResult->insertHtml("<pre>" + lst.join("\n") + "</pre>" + tbl);
-                    } else {
-                        errorMessage(tr("Unable to implement filter with such parameters and topology \n"
-                                        "Change parameters and/or topology and try again!"));
-                    }
-                } else {
-                    errorMessage(tr("Unable to use MFB filter for Cauer or Inverse Chebyshev \n"
-                                 "frequency response. Try to use another topology."));
-                }
-             }
-             break;
-    case topoSallenKey : {
-               SallenKey sk(ffunc,ftyp,par);
-               if (ffunc==Filter::User) {
-                   sk.set_TrFunc(coeffA,coeffB);
-               }
-               ok = sk.calcFilter();
-               if (ok) {
-                   sk.createSchematic(s);
-                   QStringList lst;
+                   sk.calcFilter();
                    sk.createPolesZerosList(lst);
-                   QString tbl;
-                   sk.createPartList(tbl);
-                   txtResult->insertHtml("<pre>" + lst.join("\n") + "</pre>" + tbl);
-               } else {
-                   errorMessage(tr("Unable to implement filter with such parameters and topology \n"
-                                   "Change parameters and/or topology and try again!"));
-               }
-             }
-             break;
-    default : errorMessage(tr("Function will be implemented in future version"));
-             break;
+                   sk.createPartList(lst);
+                   txtResult->appendHtml("<pre>" + lst.join("\n") + "</pre>");
+                   sk.createSchematic(s);
+            }
+            break;
+            default :
+                throw FilterError("Internal error: filter type is not implemented");
+            break;
+        }
+
+        statusBar()->showMessage(tr("Filter calculation was successful"), 2000);
+        txtResult->appendHtml("<pre>\r\n" + tr("Filter calculation was successful") + "</pre>");
+
+        QClipboard *cb = QApplication::clipboard();
+        cb->setText(s);
+
+    } catch (const FilterError & ex) {
+        errorMessage(tr("Filter calculation terminated with error:\n") + ex.what());
+        txtResult->appendHtml(QString("<pre>\r\nError: ") + ex.what() + "</pre>");
     }
-
-    if (ok) {
-      statusBar()->showMessage(tr("Filter calculation was successful"), 2000);
-        txtResult->insertHtml("<pre><br><br>" + 
-			      tr("Filter calculation was successful.") +
-			      "</pre>");
-    } else {
-      statusBar()->showMessage(tr("Filter calculation terminated with error!"), 2000);
-        txtResult->insertHtml("<pre>\r\n" +
-			      tr("Filter calculation terminated with error.") +
-			      "</pre>");
-    }
-
-    QClipboard *cb = QApplication::clipboard();
-    cb->setText(s);
-
 }
 
 void QucsActiveFilter::slotUpdateResponse()

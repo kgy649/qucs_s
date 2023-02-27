@@ -88,13 +88,11 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
     menuBar()->addSeparator();
     menuBar()->addMenu(helpMenu);
 
-    //lblInputData = new QLabel(tr("Входные данные"));
     lblA1 = new QLabel(tr("Passband attenuation, Ap (dB)"));
     lblA2 = new QLabel(tr("Stopband attenuation, As (dB)"));
     lblF1 = new QLabel(tr("Cutoff frequency, Fc (Hz)"));
     lblF2 = new QLabel(tr("Stopband frequency, Fs (Hz)"));
     lblRpl1 = new QLabel(tr("Passband ripple Rp(dB)"));
-    //lblRpl2 = new QLabel(tr("Stopband ripple (dB)"));
     lblKv = new QLabel(tr("Passband gain, Kv (dB)"));
 
     edtA1 = new QLineEdit("3");
@@ -108,8 +106,6 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
     edtF2->setValidator(val1);
     edtPassbRpl = new QLineEdit("3");
     edtPassbRpl->setValidator(val1);
-    //edtStopbRpl = new QLineEdit("3");
-    //edtStopbRpl->setValidator(val1);
     edtKv = new QLineEdit("0");
     edtKv->setValidator(val1);
     QIntValidator *val2 = new QIntValidator(2,20);
@@ -119,14 +115,14 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
 
     lblTyp = new QLabel(tr("Approximation type:"));
     cbxFilterFunc = new QComboBox;
-    QStringList lst_2;
-    lst_2<<tr("Butterworth")
-        <<tr("Chebyshev")
-        <<tr("Inverse Chebyshev")
-        <<tr("Cauer (Elliptic)")
-        <<tr("Bessel")
-        <<tr("User defined");
-    cbxFilterFunc->addItems(lst_2);
+    cbxFilterFunc->addItems({
+        tr("Butterworth"),
+        tr("Chebyshev"),
+        tr("Inverse Chebyshev"),
+        tr("Cauer (Elliptic)"),
+        tr("Bessel"),
+        tr("User defined")
+    });
     connect(cbxFilterFunc,SIGNAL(currentIndexChanged(int)),this,SLOT(slotSwitchParameters()));
 
     btnDefineTransferFunc = new QPushButton(tr("Manually define transfer function"));
@@ -142,27 +138,27 @@ QucsActiveFilter::QucsActiveFilter(QWidget *parent)
 
     lblSch = new QLabel(tr("Filter topology"));
     lblResp = new QLabel(tr("Filter type:"));
+
     cbxResponse = new QComboBox;
-    QStringList lst_3;
-    lst_3<<tr("Low Pass")
-        <<tr("High Pass")
-        <<tr("Band Pass")
-        <<tr("Band Stop");
-    cbxResponse->addItems(lst_3);
+    cbxResponse->addItems({
+        tr("Low Pass"),
+        tr("High Pass"),
+        tr("Band Pass"),
+        tr("Band Stop")
+    });
     connect(cbxResponse,SIGNAL(currentIndexChanged(int)),this,SLOT(slotUpdateResponse()));
     connect(cbxResponse,SIGNAL(currentIndexChanged(int)),this,SLOT(slotUpdateSchematic()));
     connect(cbxResponse,SIGNAL(currentIndexChanged(int)),this,SLOT(slotSetLabels()));
     connect(cbxResponse,SIGNAL(currentIndexChanged(int)),this,SLOT(slotSwitchParameters()));
 
     cbxFilterType = new QComboBox;
-    QStringList lst_1;
-    lst_1<<tr("Multifeedback (MFB)")
-       <<tr("Sallen-Key (S-K)")
-       <<tr("Cauer section");
-     //<<tr("Пассивный");
-    cbxFilterType->addItems(lst_1);
+    cbxFilterType->addItems({
+        tr("Multifeedback (MFB)"),
+        tr("Sallen-Key (S-K)"),
+        tr("Cauer section")
+    });
     connect(cbxFilterType,SIGNAL(currentIndexChanged(int)),this,SLOT(slotUpdateSchematic()));
-    this->slotSwitchParameters();
+    slotSwitchParameters();
     cbxFilterType->setMaxCount(3);
 
     // first parameters group, will go top-left
@@ -280,124 +276,143 @@ QucsActiveFilter::~QucsActiveFilter()
 
 void QucsActiveFilter::slotCalcSchematic()
 {
-    txtResult->clear();
+    try {
+        txtResult->clear();
 
-    FilterParam par;
-    if ((cbxResponse->currentIndex()==tLowPass)||
-        (cbxResponse->currentIndex()==tHiPass)) {
-       par.Ap = QLocale::system().toFloat(edtA1->text());
-       par.Fc = QLocale::system().toFloat(edtF1->text());
-       par.Fs = QLocale::system().toFloat(edtF2->text());
-    } else {
-       par.Fu = QLocale::system().toFloat(edtF1->text());
-       par.Fl = QLocale::system().toFloat(edtF2->text());
-       par.TW = QLocale::system().toFloat(edtA1->text());
+        FilterParam par{};
+        switch (cbxResponse->currentIndex()) {
+            case tLowPass: [[fallthrough]];
+            case tHiPass:
+                par.Ap = QLocale::system().toFloat(edtA1->text());
+                par.Fc = QLocale::system().toFloat(edtF1->text());
+                par.Fs = QLocale::system().toFloat(edtF2->text());
+            break;
+            default:
+                par.TW = QLocale::system().toFloat(edtA1->text());
+                par.Fu = QLocale::system().toFloat(edtF1->text());
+                par.Fl = QLocale::system().toFloat(edtF2->text());
+                if (par.Fl > par.Fu) {
+                    throw FilterError(tr("Upper cutoff frequency of band-pass/band-stop filter is\n"
+                                "less than lower. Unable to implement such filter.\n"
+                                "Change parameters and try again."));
+                }
+            break;
+        }
 
-       if (par.Fl>par.Fu) {
-           errorMessage(tr("Upper cutoff frequency of band-pass/band-stop filter is\n"
-                           "less than lower. Unable to implement such filter.\n"
-                           "Change parameters and try again."));
-           return;
-       }
-    }
-    par.As = QLocale::system().toFloat(edtA2->text());
-    par.Rp = QLocale::system().toFloat(edtPassbRpl->text());
-    if (par.Rp <= 0.0) {
-        errorMessage(tr("Passband Ripple is too low (%1)").arg(par.Rp));
-        return;
-    }
-    double G = QLocale::system().toFloat(edtKv->text());
-    par.Kv = pow(10,G/20.0);
+        par.As = QLocale::system().toFloat(edtA2->text());
+        par.Rp = QLocale::system().toFloat(edtPassbRpl->text());
+        if (par.Rp <= 0.0) {
+            throw FilterError(tr("Passband Ripple is too low (%1)").arg(par.Rp));
+        }
 
-    Filter::FilterFunc ffunc;
+        double G = QLocale::system().toFloat(edtKv->text());
+        par.Kv = pow(10,G/20.0);
 
-    switch (cbxFilterFunc->currentIndex()) {
+        Filter::FilterFunc ffunc;
+
+        switch (cbxFilterFunc->currentIndex()) {
             case funcButterworth : ffunc = Filter::Butterworth;
-                     break;
+                                   break;
             case funcChebyshev : ffunc = Filter::Chebyshev;
-                     break;
+                                 break;
             case funcInvChebyshev : ffunc = Filter::InvChebyshev;
-                     break;
+                                    break;
             case funcCauer : ffunc = Filter::Cauer;
-                     break;
+                             break;
             case funcBessel : ffunc = Filter::Bessel;
-                     par.order = edtOrder->text().toInt();
-                     break;
+                              par.order = edtOrder->text().toInt();
+                              break;
             case funcUser : ffunc = Filter::User;
-                     break;
+                            break;
             default: ffunc = Filter::NoFunc;
                      break;
         }
 
 
 
-    switch (cbxResponse->currentIndex()) {
-    case tLowPass : ftyp = Filter::LowPass;
-        break;
-    case tHiPass : ftyp = Filter::HighPass;
-        break;
-    case tBandPass : ftyp = Filter::BandPass;
-        break;
-    case tBandStop : ftyp = Filter::BandStop;
-        break;
-    default: ftyp = Filter::NoFilter;
-        break;
-    }
+        switch (cbxResponse->currentIndex()) {
+            case tLowPass : ftyp = Filter::LowPass;
+                            break;
+            case tHiPass : ftyp = Filter::HighPass;
+                           break;
+            case tBandPass : ftyp = Filter::BandPass;
+                             break;
+            case tBandStop : ftyp = Filter::BandStop;
+                             break;
+            default: ftyp = Filter::NoFilter;
+                     break;
+        }
 
-    QString s;
+        QString s;
 
-    try {
         switch (cbxFilterType->currentIndex()) {
             case topoCauer : {
-                if (!((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)||(ftyp==Filter::BandStop))) {
-                    throw FilterError(
-                        "Unable to use Cauer section for Chebyshev or Butterworth \n"
-                        "frequency response. Try to use another topology.");
-                }
-                SchCauer cauer(ffunc,ftyp,par);
-                cauer.calcFilter();
-                QString lst;
-                cauer.createPolesZerosList(lst);
-                cauer.createPartList(lst);
-                txtResult->insertHtml("<pre>" + lst + "</pre>");
-                cauer.createSchematic(s);
-            }
-            break;
+                                 if (!((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)||(ftyp==Filter::BandStop))) {
+                                     throw FilterError(tr(
+                                             "Unable to use Cauer section for Chebyshev or Butterworth \n"
+                                             "frequency response. Try to use another topology."));
+                                 }
+                                 SchCauer cauer(ffunc,ftyp,par);
+                                 cauer.calcFilter();
+                                 QString lst;
+                                 cauer.createPolesZerosList(lst);
+                                 cauer.createPartList(lst);
+                                 txtResult->insertHtml("<pre>" + lst + "</pre>");
+                                 cauer.createSchematic(s);
+                                 par.order = cauer.getOrder();
+                             }
+                             break;
             case topoMFB : {
-                if ((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)) {
-                    throw FilterError(
-                        "Unable to use MFB filter for Cauer or Inverse Chebyshev \n"
-                        "frequency response. Try to use another topology.");
-                }
-                MFBfilter mfb(ffunc,ftyp,par);
-                if (ffunc==Filter::User) {
-                    mfb.set_TrFunc(coeffA,coeffB);
-                }
-                mfb.calcFilter();
-                QString lst;
-                mfb.createPolesZerosList(lst);
-                mfb.createPartList(lst);
-                txtResult->insertHtml("<pre>" + lst + "</pre>");
-                mfb.createSchematic(s);
-            }
-            break;
+                               if ((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)) {
+                                   throw FilterError(tr(
+                                           "Unable to use MFB filter for Cauer or Inverse Chebyshev \n"
+                                           "frequency response. Try to use another topology."));
+                               }
+                               MFBfilter mfb(ffunc,ftyp,par);
+                               if (ffunc==Filter::User) {
+                                   mfb.set_TrFunc(coeffA,coeffB);
+                               }
+                               mfb.calcFilter();
+                               QString lst;
+                               mfb.createPolesZerosList(lst);
+                               mfb.createPartList(lst);
+                               txtResult->insertHtml("<pre>" + lst + "</pre>");
+                               mfb.createSchematic(s);
+                               par.order = mfb.getOrder();
+                           }
+                           break;
             case topoSallenKey : {
-                   SallenKey sk(ffunc,ftyp,par);
-                   if (ffunc==Filter::User) {
-                       sk.set_TrFunc(coeffA,coeffB);
-                   }
-                   sk.calcFilter();
-                   QString lst;
-                   sk.createPolesZerosList(lst);
-                   sk.createPartList(lst);
-                   txtResult->insertHtml("<pre>" + lst + "</pre>");
-                   sk.createSchematic(s);
-            }
-            break;
+                                     SallenKey sk(ffunc,ftyp,par);
+                                     if (ffunc==Filter::User) {
+                                         sk.set_TrFunc(coeffA,coeffB);
+                                     }
+                                     sk.calcFilter();
+                                     QString lst;
+                                     sk.createPolesZerosList(lst);
+                                     sk.createPartList(lst);
+                                     txtResult->insertHtml("<pre>" + lst + "</pre>");
+                                     sk.createSchematic(s);
+                                     par.order = sk.getOrder();
+                                 }
+                                 break;
             default :
-                throw FilterError("Internal error: filter type is not implemented");
+                                 throw FilterError(tr("Internal error: filter type is not implemented"));
+                                 break;
+        }
+
+        switch (cbxFilterFunc->currentIndex()) {
+            case funcButterworth:   [[fallthrough]];
+            case funcChebyshev:     [[fallthrough]];
+            case funcInvChebyshev:  [[fallthrough]];
+            case funcCauer:
+                edtOrder->setText(QString("%1").arg(par.order));
+            break;
+            case funcBessel:        [[fallthrough]];
+            case funcUser:
+                // Nothing to do
             break;
         }
+
 
         statusBar()->showMessage(tr("Filter calculation was successful"), 2000);
         txtResult->insertHtml("<pre>\r\n" + tr("Filter calculation was successful") + "</pre>");
@@ -474,14 +489,6 @@ void QucsActiveFilter::slotUpdateSchematic()
 
 void QucsActiveFilter::slotSwitchParameters()
 {
-    if (cbxFilterFunc->currentIndex()==funcButterworth) { // Butterworth
-        edtA1->setEnabled(true);
-        edtPassbRpl->setEnabled(false);
-    } else {
-        edtA1->setEnabled(false);
-        edtPassbRpl->setEnabled(true);
-    }
-
     if ((cbxFilterFunc->currentIndex()==funcCauer)||
         (cbxFilterFunc->currentIndex()==funcInvChebyshev)||
         (cbxResponse->currentIndex()==tBandStop)) { // Inverse Chebyshev
@@ -502,45 +509,56 @@ void QucsActiveFilter::slotSwitchParameters()
         cbxFilterType->removeItem(topoCauer);
     }
 
-    if ((cbxFilterFunc->currentIndex())==funcBessel) { // Bessel
-        edtOrder->setEnabled(true);
-    } else {
-        edtOrder->setEnabled(false);
-    }
-
-    if ((cbxFilterFunc->currentIndex()==funcUser)||
-        (cbxFilterFunc->currentIndex()==funcBessel)) { // Bessel or User Def.
-        btnDefineTransferFunc->setEnabled(true);
-        edtF2->setEnabled(false);
-        edtPassbRpl->setEnabled(false);
-        edtA1->setEnabled(false);
-        edtA2->setEnabled(false);
-        edtKv->setEnabled(false);
-    } else {
-        btnDefineTransferFunc->setEnabled(false);
-        edtF2->setEnabled(true);
-        edtPassbRpl->setEnabled(true);
-        edtA1->setEnabled(true);
-        edtA2->setEnabled(true);
-        edtKv->setEnabled(true);
+    {
+        bool bGeneric  = true;
+        bool bPassRipp = false;
+        bool bOrder    = false;
+        bool bTransfer = false;
+        switch (cbxFilterFunc->currentIndex()) {
+            case funcButterworth:
+            break;
+            case funcChebyshev:
+                bPassRipp = true;
+            break;
+            case funcInvChebyshev:
+            break;
+            case funcCauer:
+                bPassRipp = true;
+            break;
+            case funcBessel:
+                bOrder = true;
+                bTransfer = true;
+                bGeneric = false;
+            break;
+            case funcUser:
+                bTransfer = true;
+                bGeneric = false;
+            break;
+        }
+        edtOrder->setEnabled(bOrder);
+        edtPassbRpl->setEnabled(bPassRipp);
+        btnDefineTransferFunc->setEnabled(bTransfer);
+        edtF2->setEnabled(bGeneric);
+        edtA1->setEnabled(bGeneric);
+        edtA2->setEnabled(bGeneric);
+        edtKv->setEnabled(bGeneric);
     }
 }
 
 void QucsActiveFilter::slotSetLabels()
 {
-    if ((cbxResponse->currentIndex()==tBandPass)|| // set proper labels
-        (cbxResponse->currentIndex()==tBandStop)) {
-        lblF1->setText(tr("Upper cutoff frequency, Fu (Hz)"));
-        lblF2->setText(tr("Lower cutoff frequency, Fl (Hz)"));
-        lblA1->setText(tr("Transient bandwidth, TW (Hz)"));
-        //lblA2->setEnabled(false);
-        //edtA2->setEnabled(false);
-    } else {
-        lblF1->setText(tr("Cutoff frequency, Fc (Hz)"));
-        lblF2->setText(tr("Stopband frequency, Fs (Hz)"));
-        lblA1->setText(tr("Passband attenuation, Ap (dB)"));
-        //lblA2->setEnabled(true);
-        //edtA2->setEnabled(true);
+    switch (cbxResponse->currentIndex()) {
+        case tBandPass: [[fallthrough]];
+        case tBandStop:
+            lblF1->setText(tr("Upper cutoff frequency, Fu (Hz)"));
+            lblF2->setText(tr("Lower cutoff frequency, Fl (Hz)"));
+            lblA1->setText(tr("Transient bandwidth, TW (Hz)"));
+        break;
+        default:
+            lblF1->setText(tr("Cutoff frequency, Fc (Hz)"));
+            lblF2->setText(tr("Stopband frequency, Fs (Hz)"));
+            lblA1->setText(tr("Passband attenuation, Ap (dB)"));
+        break;
     }
 }
 

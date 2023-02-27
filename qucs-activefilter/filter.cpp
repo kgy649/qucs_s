@@ -24,6 +24,7 @@
 #include "bessel.h"
 #include "filter-exceptions.h"
 #include <string>
+#include <utility>
 
 using ::QUCS::Exception::FilterError;
 
@@ -36,36 +37,36 @@ Filter::Filter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par)
     ffunc = ffunc_;
     ftype = type_;
 
-    if ((ftype==Filter::HighPass)||(ftype==Filter::LowPass)) {
-        Fc = par.Fc;
-        Fs = par.Fs;
-        Ap = par.Ap;
-    } else {
-        Fl = par.Fl;
-        Fu = par.Fu;
-        TW = par.TW;
-        BW = fabs(Fu -Fl);
-        F0 = sqrt(Fu*Fl);
-        if ((ftype==Filter::BandPass)||
-            (ftype==Filter::BandStop)) { // BandPass
+    switch (ftype) {
+        case Filter::HighPass: [[fallthrough]];
+        case Filter::LowPass:
+            Fc = par.Fc;
+            Fs = par.Fs;
+            Ap = par.Ap;
+        break;
+        default:
+            Fl = par.Fl;
+            Fu = par.Fu;
+            TW = par.TW;
+            BW = fabs(Fu -Fl);
+            F0 = sqrt(Fu*Fl);
             Fc=BW;          // cutoff freq. of LPF prototype
             double  Fs1 = Fu + TW;
             double  Fs1lp = fabsf(Fs1 - (F0*F0)/Fs1);    // stopband freq. of LPF prototype
             double  Fs2 = Fl - TW;
             double  Fs2lp = fabsf(Fs2 - (F0*F0)/Fs2);
             Fs = std::min(Fs1lp,Fs2lp);
-        }
-        Ap = 3.0;
-        qDebug()<<Fc<<Fs;
-        Q = F0/fabs(Fu-Fl);
+            Ap = 3.0;
+            qDebug()<<Fc<<Fs;
+            Q = F0/fabs(Fu-Fl);
+        break;
     }
 
     Rp = par.Rp;
     As = par.As;
     Kv = par.Kv;
-    if (ffunc==Filter::Bessel) {
-        order = par.order;
-    }
+
+    order = par.order;  // for Bessel
 }
 
 Filter::~Filter()
@@ -462,7 +463,7 @@ void Filter::checkRCL()
     }
 }
 
-bool Filter::calcChebyshev()
+void Filter::calcChebyshev()
 {
     double  kf = std::max(Fs/Fc,Fc/Fs);
     double  eps=sqrt(pow(10,0.1*Rp)-1);
@@ -472,14 +473,16 @@ bool Filter::calcChebyshev()
 
     if (N < 1) {
         ::std::string msg = "Chebyshev Filter: too low order (" + ::std::to_string(N) + ")\n";
-        msg += ::std::string(" o As=") + ::std::to_string(As) + "\n o Rp=" + ::std::to_string(Rp) + "\n o Fs=" + ::std::to_string(Fs) + "\n o Fc=" + ::std::to_string(Fc) + "\n o kf=" + ::std::to_string(kf) + ")";
+        msg += ::std::string(" o As=") + ::std::to_string(As)
+                         + "\n o Rp="  + ::std::to_string(Rp)
+                         + "\n o Fs="  + ::std::to_string(Fs)
+                         + "\n o Fc="  + ::std::to_string(Fc)
+                         + "\n o kf="  + ::std::to_string(kf) + ")";
         throw FilterError(msg.c_str());
     }
 
-    if (N>MaxOrder) {
-        Poles.clear();
-        Zeros.clear();
-        return false;
+    if (N > MaxOrder) {
+        throw FilterError(QObject::tr("Too high Filter Order: %1").arg(N));
     }
 
     if (ftype==Filter::BandStop) {
@@ -500,10 +503,9 @@ bool Filter::calcChebyshev()
     }
 
     order = Poles.count();
-    return true;
 }
 
-bool Filter::calcButterworth()
+void Filter::calcButterworth()
 {
     double  kf = std::min(Fc/Fs,Fs/Fc);
 
@@ -515,10 +517,12 @@ bool Filter::calcButterworth()
         if (N2%2!=0) N2++; // only even order Cauer.
     }
 
+    if (N2 > MaxOrder) {
+        throw FilterError(QObject::tr("Too high Filter Order: %1").arg(N2));
+    }
+
     Poles.clear();
     Zeros.clear();
-
-    if (N2>MaxOrder) return false;
 
     for (int k=1;k<=N2;k++) {
         double  re =-1*sin(pi*(2*k-1)/(2*N2));
@@ -528,15 +532,10 @@ bool Filter::calcButterworth()
     }
 
     order = Poles.count();
-
-    return true;
 }
 
-bool Filter::calcInvChebyshev() // Chebyshev Type-II filter
+void Filter::calcInvChebyshev() // Chebyshev Type-II filter
 {
-    Poles.clear();
-    Zeros.clear();
-
     double  kf = std::max(Fs/Fc,Fc/Fs);
 
     order = ceil(acosh(sqrt(pow(10.0,0.1*As)-1.0))/acosh(kf));
@@ -545,11 +544,16 @@ bool Filter::calcInvChebyshev() // Chebyshev Type-II filter
         if (order%2!=0) order++; // only even order Cauer.
     }
 
-    if (order>MaxOrder) return false;
+    if (order>MaxOrder) {
+        throw FilterError(QObject::tr("Too high Filter Order: %1").arg(order));
+    }
 
     double  eps = 1.0/(sqrt(pow(10.0,0.1*As)-1.0));
     double  a = sinh((asinh(1.0/eps))/(order));
     double  b = cosh((asinh(1.0/eps))/(order));
+
+    Poles.clear();
+    Zeros.clear();
 
     for (int k=1;k<=order;k++) {
         double  im = 1.0/(cos(((2*k-1)*pi)/(2*order)));
@@ -564,8 +568,6 @@ bool Filter::calcInvChebyshev() // Chebyshev Type-II filter
         pol = std::complex<float>(1.0,0) / invpol; // pole
         Poles.append(pol);
     }
-
-    return true;
 }
 
 void Filter::cauerOrderEstim() // from Digital Filter Design Handbook page 102
@@ -582,7 +584,7 @@ void Filter::cauerOrderEstim() // from Digital Filter Design Handbook page 102
     }
 }
 
-bool Filter::calcCauer() // from Digital Filter Designer's handbook p.103
+void Filter::calcCauer() // from Digital Filter Designer's handbook p.103
 {
     double  P0;
     //float H0;
@@ -590,10 +592,9 @@ bool Filter::calcCauer() // from Digital Filter Designer's handbook p.103
     double  aa[50],bb[50],cc[50];
 
     cauerOrderEstim();
-    if (order>MaxOrder) {
-        Poles.clear();
-        Zeros.clear();
-        return false;
+
+    if (order > MaxOrder) {
+        throw FilterError(QObject::tr("Too high Filter Order: %1").arg(order));
     }
 
     double  k = Fc/Fs;
@@ -664,6 +665,7 @@ bool Filter::calcCauer() // from Digital Filter Designer's handbook p.103
 
     Zeros.clear();
     Poles.clear();
+
     for (int i=0;i<r;i++) {
         double  im = sqrt(aa[i]);
         Zeros.append(std::complex<float>(0,im));
@@ -683,79 +685,71 @@ bool Filter::calcCauer() // from Digital Filter Designer's handbook p.103
         im = 0.5*sqrt(-1.0*bb[i]*bb[i]+4*cc[i]);
         Poles.append(std::complex<float>(re,-im));
     }
-
-    return true;
 }
 
-bool Filter::calcBessel()
+void Filter::calcBessel()
 {
+    if (order <= 0 || order >= static_cast<int>(BesselPolesSize)) {
+        throw FilterError(QObject::tr("Invalid Filter Order: %1").arg(order));
+    }
+
     Poles.clear();
     Zeros.clear();
-
-    if (order<=0) return false;
 
     for (int i=0;i<order;i++) {
         Poles.append(std::complex<float>(BesselPoles[order-1][2*i],BesselPoles[order-1][2*i+1]));
     }
 
     reformPolesZeros();
-    return true;
 }
 
-bool Filter::calcUserTrFunc()
+void Filter::calcUserTrFunc()
 {
-    if ((!vec_A.isEmpty())&&(!vec_B.isEmpty())) {
-        long double *a = vec_A.data();
-        long double *b = vec_B.data();
-
-        int a_order = vec_A.count() - 1;
-        int b_order = vec_B.count() - 1;
-
-        order = std::max(a_order,b_order);
-        if (order>MaxOrder) return false;
-
-        qf_poly Numenator(b_order,b);
-        qf_poly Denomenator(a_order,a);
-
-        Numenator.to_roots();
-        Denomenator.to_roots();
-
-        Numenator.disp_c();
-        Denomenator.disp_c();
-
-        Numenator.roots_to_complex(Zeros);
-        Denomenator.roots_to_complex(Poles);
-
-        reformPolesZeros();
-        return true;
+    if (vec_A.isEmpty() || vec_B.isEmpty()) {
+        throw FilterError(QObject::tr("Filter Coefficients are missing for User Function!"));
     }
 
-    return false;
+    long double *a = vec_A.data();
+    long double *b = vec_B.data();
 
+    int a_order = vec_A.count() - 1;
+    int b_order = vec_B.count() - 1;
+
+    order = std::max(a_order,b_order);
+    if (order > MaxOrder) {
+        throw FilterError(QObject::tr("Too high Filter Order: %1").arg(order));
+    }
+
+    qf_poly Numenator(b_order,b);
+    qf_poly Denomenator(a_order,a);
+
+    Numenator.to_roots();
+    Denomenator.to_roots();
+
+    Numenator.disp_c();
+    Denomenator.disp_c();
+
+    Numenator.roots_to_complex(Zeros);
+    Denomenator.roots_to_complex(Poles);
+
+    reformPolesZeros();
 }
 
 void Filter::reformPolesZeros()
 {
-    int Np = Poles.count();
-    int Nz = Zeros.count();
-
-    for (int i=0;i<Np/2;i++) {
-        if ((i%2)!=0) {
-            std::complex<float> tmp;
-            tmp = Poles[i];
-            Poles[i]=Poles[Np-1-i];
-            Poles[Np-1-i]=tmp;
+    auto reform = [this](auto & data)
+    {
+        int Np = data.count();
+        for (int i=0; i < Np/2; ++i) {
+            if ((i%2) == 0) {
+                continue;
+            }
+            ::std::swap(data[i], data[Np-1-i]);
         }
-    }
+    };
 
-    for (int i=0;i<Nz/2;i++) {
-        if ((i%2)!=0) {
-            std::complex<float> tmp;
-            tmp = Poles[i];
-            Poles[i]=Poles[Nz-1-i];
-            Poles[Nz-1-i]=tmp;
-        }
-    }
+    reform(Poles);
+    reform(Zeros);
 }
 
 void Filter::set_TrFunc(QVector<long double> a, QVector<long double> b)

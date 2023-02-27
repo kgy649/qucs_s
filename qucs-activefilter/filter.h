@@ -23,7 +23,7 @@
 #include <complex>
 #include <limits>
 
-static const double pi = 3.1415926535897932384626433832795029;  /* pi   */
+static constexpr double pi = 3.1415926535897932384626433832795029;  /* pi   */
 
 struct RC_elements {
     int     N  = 0;
@@ -78,12 +78,12 @@ protected:
 
     int Nr1,Nc1,Nop1; // number of R,C, opamp per stage
 
-    bool calcButterworth();
-    bool calcChebyshev();
-    bool calcInvChebyshev();
-    bool calcCauer();
-    bool calcBessel();
-    bool calcUserTrFunc();
+    void calcButterworth();
+    void calcChebyshev();
+    void calcInvChebyshev();
+    void calcCauer();
+    void calcBessel();
+    void calcUserTrFunc();
     void checkRCL(); // Checks RCL values. Are one of them NaN or not?
 
     void createFirstOrderComponentsHPF(QString &s,RC_elements stage, int dx);
@@ -119,6 +119,10 @@ public:
 
     void set_TrFunc(QVector<long double> a, QVector<long double> b);
 
+    inline int getOrder(void) const
+    {
+        return order;
+    }
 };
 
 #endif // FILTER_H

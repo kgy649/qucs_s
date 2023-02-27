@@ -11,6 +11,7 @@
 #ifndef __QUCS_ACTIVEFILTER_FILTER_EXCEPTIONS_H_INCLUDED__
 #define __QUCS_ACTIVEFILTER_FILTER_EXCEPTIONS_H_INCLUDED__
 
+#include <QString>
 #include <exception>
 
 namespace QUCS
@@ -23,6 +24,11 @@ class FilterError: public ::std::runtime_error
 public:
     FilterError(const char * msg):
         ::std::runtime_error(msg)
+    {
+    }
+
+    FilterError(const QString & msg):
+        FilterError(msg.toUtf8().data())
     {
     }
 

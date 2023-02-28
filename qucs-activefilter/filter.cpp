@@ -737,7 +737,7 @@ void Filter::calcUserTrFunc()
 
 void Filter::reformPolesZeros()
 {
-    auto reform = [this](auto & data)
+    auto reform = [this](QVector< std::complex<float> > & data)
     {
         int Np = data.count();
         for (int i=0; i < Np/2; ++i) {

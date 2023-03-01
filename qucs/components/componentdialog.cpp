@@ -358,8 +358,7 @@ ComponentDialog::ComponentDialog(Component *c, Schematic *d)
   v1->addWidget(ComboEdit);
   ComboEdit->setVisible(false);
   ComboEdit->installEventFilter(this); // to catch Enter keypress
-  connect(ComboEdit, SIGNAL(activated(const QString&)),
-	  SLOT(slotApplyChange(const QString&)));
+  connect(ComboEdit, &QComboBox::activated, [this](){ slotApplyChange(ComboEdit->currentText()); });
 
   QHBoxLayout *h3 = new QHBoxLayout;
   v1->addLayout(h3);

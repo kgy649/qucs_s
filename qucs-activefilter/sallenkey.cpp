@@ -333,7 +333,7 @@ void SallenKey::createHighPassSchematic(QString &s)
     }
 
     if (N1stOrd!=0) {
-        createFirstOrderWires(s,dx,160);
+        createFirstOrderWires(s, Sections.last(), dx, 160);
     }
 
     s += "</Wires>\n";
@@ -376,7 +376,7 @@ void SallenKey::createLowPassSchematic(QString &s)
     }
 
     if (N1stOrd!=0) {
-        createFirstOrderComponentsLPF(s,Sections.last(),dx);
+        createFirstOrderComponentsLPF(s, Sections.last(), dx);
     }
 
     s += "</Components>\n";
@@ -415,7 +415,7 @@ void SallenKey::createLowPassSchematic(QString &s)
     }
 
     if (N1stOrd!=0) {
-        createFirstOrderWires(s,dx,160);
+        createFirstOrderWires(s, Sections.last(), dx, 160);
     }
 
     s += "</Wires>\n";

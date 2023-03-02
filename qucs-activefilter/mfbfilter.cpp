@@ -116,7 +116,7 @@ void MFBfilter::createLowPassSchematic(QString &s)
     }
 
     if (N1stOrd!=0) {
-            createFirstOrderWires(s,dx+10,270);
+            createFirstOrderWires(s, Sections.last(), dx+10, 270);
     }
 
     s += "</Wires>\n";
@@ -155,7 +155,7 @@ void MFBfilter::createHighPassSchematic(QString &s)
     }
 
     if (N1stOrd!=0) {
-        createFirstOrderComponentsHPF(s,Sections.last(),dx+10);
+        createFirstOrderComponentsHPF(s, Sections.last(), dx+10);
     }
 
     s += "</Components>\n";
@@ -190,7 +190,7 @@ void MFBfilter::createHighPassSchematic(QString &s)
     }
 
     if (N1stOrd!=0) {
-            createFirstOrderWires(s,dx+10,270);
+            createFirstOrderWires(s, Sections.last(), dx+10, 270);
     }
 
     s += "</Wires>\n";

@@ -428,7 +428,7 @@ void SchCauer::createGenericSchematic(QString &s)
 
     if ((ftype==Filter::LowPass)||(ftype==Filter::HighPass)) {
         if (N1stOrd!=0) {
-                createFirstOrderWires(s,dx+80,260);
+                createFirstOrderWires(s, Sections.last(), dx+80, 260);
         }
     }
 

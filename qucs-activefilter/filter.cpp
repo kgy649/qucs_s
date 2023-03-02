@@ -366,14 +366,20 @@ void Filter::createFirstOrderComponentsLPF(QString &s,RC_elements stage,int dx)
     double C = autoscaleCapacitor(stage.C2,suf);
     s += QString("<OpAmp OP%1 1 %2 160 -26 42 0 0 \"1e6\" 1 \"15 V\" 0>\n").arg(Nopamp+1).arg(270+dx);
     s += QString("<GND * 1 %1 270 0 0 0 0>\n").arg(170+dx);
-    s += QString("<GND * 1 %1 370 0 0 0 0>\n").arg(220+dx);
-    s += QString("<R R%1 1 %2 340 15 -26 0 1 \"%3k\" 1 \"26.85\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n").arg(Nr+2).arg(220+dx).arg(stage.R2,0,'f',3);
+    if (stage.R3 != 0) {
+        s += QString("<R R%1 1 %2 340 15 -26 0 1 \"%3k\" 1 \"26.85\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n").arg(Nr+2).arg(220+dx).arg(stage.R2,0,'f',3);
+        s += QString("<GND * 1 %1 370 0 0 0 0>\n").arg(220+dx);
+    }
     s += QString("<R R%1 1 %2 190 -75 -52 1 0 \"%3k\" 1 \"26.85\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n").arg(Nr+1).arg(100+dx).arg(stage.R1,0,'f',3);
-    s += QString("<R R%1 1 %2 260 -26 15 1 2 \"%3k\" 1 \"26.85\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n").arg(Nr+3).arg(310+dx).arg(stage.R3,0,'f',3);
+    if (stage.R3 == 0) {
+    } else if (stage.R3 == ::std::numeric_limits<double>::infinity()) {
+    } else {
+        s += QString("<R R%1 1 %2 260 -26 15 1 2 \"%3k\" 1 \"26.85\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n").arg(Nr+3).arg(310+dx).arg(stage.R3,0,'f',3);
+    }
     s += QString("<C C%1 1 %2 240 26 -45 1 1 \"%3%4\" 1 \"\" 0 \"neutral\" 0>\n").arg(Nc+1).arg(170+dx).arg(C,0,'f',3).arg(suf);
 }
 
-void Filter::createFirstOrderWires(QString &s, int dx, int y)
+void Filter::createFirstOrderWires(QString &s, const RC_elements & stage, int dx, int y)
 {
     s += QString("<%1 190 %2 190 \"\" 0 0 0 \"\">\n").arg(dx-20).arg(70+dx);
     s += QString("<%1 190 %2 %3 \"\" 0 0 0 \"\">\n").arg(dx-20).arg(dx-20).arg(y);
@@ -389,7 +395,11 @@ void Filter::createFirstOrderWires(QString &s, int dx, int y)
     s += QString("<%1 180 %2 260 \"\" 0 0 0 \"\">\n").arg(220+dx).arg(220+dx);
     s += QString("<%1 180 %2 180 \"\" 0 0 0 \"\">\n").arg(220+dx).arg(240+dx);
     s += QString("<%1 260 %2 260 \"\" 0 0 0 \"\">\n").arg(220+dx).arg(280+dx);
-    s += QString("<%1 260 %2 310 \"\" 0 0 0 \"\">\n").arg(220+dx).arg(220+dx);
+    if (stage.R3 != 0) {
+        s += QString("<%1 260 %2 310 \"\" 0 0 0 \"\">\n").arg(220+dx).arg(220+dx);
+    } else {
+        s += QString("<%1 260 %2 260 \"\" 0 0 0 \"\">\n").arg(280+dx).arg(340+dx);
+    }
 }
 
 

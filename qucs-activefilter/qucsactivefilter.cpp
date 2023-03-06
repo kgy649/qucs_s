@@ -287,7 +287,8 @@ void QucsActiveFilter::slotCalcSchematic()
                 par.Fc = QLocale::system().toFloat(edtF1->text());
                 par.Fs = QLocale::system().toFloat(edtF2->text());
             break;
-            default:
+            case tBandPass: [[fallthrough]];
+            case tBandStop:
                 par.TW = QLocale::system().toFloat(edtA1->text());
                 par.Fu = QLocale::system().toFloat(edtF1->text());
                 par.Fl = QLocale::system().toFloat(edtF2->text());
@@ -296,6 +297,9 @@ void QucsActiveFilter::slotCalcSchematic()
                                 "less than lower. Unable to implement such filter.\n"
                                 "Change parameters and try again."));
                 }
+            break;
+            default:
+                throw FilterError("Unknown filter type (internal error)");
             break;
         }
 
@@ -311,93 +315,102 @@ void QucsActiveFilter::slotCalcSchematic()
         Filter::FilterFunc ffunc;
 
         switch (cbxFilterFunc->currentIndex()) {
-            case funcButterworth : ffunc = Filter::Butterworth;
-                                   break;
-            case funcChebyshev : ffunc = Filter::Chebyshev;
-                                 break;
-            case funcInvChebyshev : ffunc = Filter::InvChebyshev;
-                                    break;
-            case funcCauer : ffunc = Filter::Cauer;
-                             break;
-            case funcBessel : ffunc = Filter::Bessel;
-                              par.order = edtOrder->text().toInt();
-                              break;
-            case funcUser : ffunc = Filter::User;
-                            break;
-            default: ffunc = Filter::NoFunc;
-                     break;
+            case funcButterworth:
+                ffunc = Filter::Butterworth;
+            break;
+            case funcChebyshev:
+                ffunc = Filter::Chebyshev;
+            break;
+            case funcInvChebyshev:
+                ffunc = Filter::InvChebyshev;
+            break;
+            case funcCauer:
+                ffunc = Filter::Cauer;
+            break;
+            case funcBessel:
+                ffunc = Filter::Bessel;
+                par.order = edtOrder->text().toInt();
+            break;
+            case funcUser:
+                ffunc = Filter::User;
+            break;
+            default:
+                ffunc = Filter::NoFunc;
+            break;
         }
 
 
 
         switch (cbxResponse->currentIndex()) {
-            case tLowPass : ftyp = Filter::LowPass;
-                            break;
-            case tHiPass : ftyp = Filter::HighPass;
-                           break;
-            case tBandPass : ftyp = Filter::BandPass;
-                             break;
-            case tBandStop : ftyp = Filter::BandStop;
-                             break;
-            default: ftyp = Filter::NoFilter;
-                     break;
+            case tLowPass:
+                ftyp = Filter::LowPass;
+            break;
+            case tHiPass:
+                ftyp = Filter::HighPass;
+            break;
+            case tBandPass:
+                ftyp = Filter::BandPass;
+            break;
+            case tBandStop:
+                ftyp = Filter::BandStop;
+            break;
+            default:
+                ftyp = Filter::NoFilter;
+            break;
         }
 
         QString s;
 
         switch (cbxFilterType->currentIndex()) {
-            case topoCauer : {
-                                 if (!((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)||(ftyp==Filter::BandStop))) {
-                                     throw FilterError(tr(
-                                             "Unable to use Cauer section for Chebyshev or Butterworth \n"
-                                             "frequency response. Try to use another topology."));
-                                 }
-                                 SchCauer cauer(ffunc,ftyp,par);
-                                 cauer.calcFilter();
-                                 QString lst;
-                                 cauer.createPolesZerosList(lst);
-                                 cauer.createPartList(lst);
-                                 txtResult->insertHtml("<pre>" + lst + "</pre>");
-                                 cauer.createSchematic(s);
-                                 par.order = cauer.getOrder();
-                             }
-                             break;
-            case topoMFB : {
-                               if ((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)) {
-                                   throw FilterError(tr(
-                                           "Unable to use MFB filter for Cauer or Inverse Chebyshev \n"
-                                           "frequency response. Try to use another topology."));
-                               }
-                               MFBfilter mfb(ffunc,ftyp,par);
-                               if (ffunc==Filter::User) {
-                                   mfb.set_TrFunc(coeffA,coeffB);
-                               }
-                               mfb.calcFilter();
-                               QString lst;
-                               mfb.createPolesZerosList(lst);
-                               mfb.createPartList(lst);
-                               txtResult->insertHtml("<pre>" + lst + "</pre>");
-                               mfb.createSchematic(s);
-                               par.order = mfb.getOrder();
-                           }
-                           break;
-            case topoSallenKey : {
-                                     SallenKey sk(ffunc,ftyp,par);
-                                     if (ffunc==Filter::User) {
-                                         sk.set_TrFunc(coeffA,coeffB);
-                                     }
-                                     sk.calcFilter();
-                                     QString lst;
-                                     sk.createPolesZerosList(lst);
-                                     sk.createPartList(lst);
-                                     txtResult->insertHtml("<pre>" + lst + "</pre>");
-                                     sk.createSchematic(s);
-                                     par.order = sk.getOrder();
-                                 }
-                                 break;
+            case topoCauer:
+                if (!((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)||(ftyp==Filter::BandStop))) {
+                    throw FilterError(tr("Unable to use Cauer section for Chebyshev or Butterworth \nfrequency response. Try to use another topology."));
+                } else {
+                    SchCauer cauer(ffunc,ftyp,par);
+                    cauer.calcFilter();
+                    QString lst;
+                    cauer.createPolesZerosList(lst);
+                    cauer.createPartList(lst);
+                    txtResult->insertHtml("<pre>" + lst + "</pre>");
+                    cauer.createSchematic(s);
+                    par.order = cauer.getOrder();
+                }
+            break;
+            case topoMFB:
+                if ((ffunc==Filter::InvChebyshev)||(ffunc==Filter::Cauer)) {
+                    throw FilterError(tr("Unable to use MFB filter for Cauer or Inverse Chebyshev \nfrequency response. Try to use another topology."));
+                } else {
+                    MFBfilter mfb(ffunc,ftyp,par);
+                    if (ffunc==Filter::User) {
+                        mfb.set_TrFunc(coeffA,coeffB);
+                    }
+                    mfb.calcFilter();
+                    QString lst;
+                    mfb.createPolesZerosList(lst);
+                    mfb.createPartList(lst);
+                    txtResult->insertHtml("<pre>" + lst + "</pre>");
+                    mfb.createSchematic(s);
+                    par.order = mfb.getOrder();
+                }
+            break;
+            case topoSallenKey:
+                {
+                    SallenKey sk(ffunc,ftyp,par);
+                    if (ffunc==Filter::User) {
+                        sk.set_TrFunc(coeffA,coeffB);
+                    }
+                    sk.calcFilter();
+                    QString lst;
+                    sk.createPolesZerosList(lst);
+                    sk.createPartList(lst);
+                    txtResult->insertHtml("<pre>" + lst + "</pre>");
+                    sk.createSchematic(s);
+                    par.order = sk.getOrder();
+                }
+            break;
             default :
-                                 throw FilterError(tr("Internal error: filter type is not implemented"));
-                                 break;
+                throw FilterError(tr("Internal error: filter type is not implemented"));
+            break;
         }
 
         switch (cbxFilterFunc->currentIndex()) {
@@ -421,7 +434,7 @@ void QucsActiveFilter::slotCalcSchematic()
         cb->setText(s);
 
     } catch (const FilterError & ex) {
-        errorMessage(tr("Filter calculation terminated with error:\n") + ex.what());
+        errorMessage(tr("Filter calculation terminated with error:\n%1").arg(ex.what()));
         txtResult->insertHtml(QString("<pre>\r\nError: ") + ex.what() + "</pre>");
     }
 }
@@ -434,19 +447,23 @@ void QucsActiveFilter::slotUpdateResponse()
         case tLowPass :
             s = ":/images/bitmaps/AFR.svg";
             ftyp = Filter::LowPass;
-            break;
-        case tHiPass : s = ":/images/bitmaps/high-pass.svg";
+        break;
+        case tHiPass:
+            s = ":/images/bitmaps/high-pass.svg";
             ftyp = Filter::HighPass;
-            break;
-        case tBandPass : s = ":/images/bitmaps/bandpass.svg";
+        break;
+        case tBandPass:
+            s = ":/images/bitmaps/bandpass.svg";
             ftyp = Filter::BandPass;
-            break;
-        case tBandStop : s = ":/images/bitmaps/bandstop.svg";
+        break;
+        case tBandStop:
+            s = ":/images/bitmaps/bandstop.svg";
             ftyp = Filter::BandStop;
-            break;
-        default: ftyp = Filter::NoFilter;
-            break;
-        }
+        break;
+        default:
+            ftyp = Filter::NoFilter;
+        break;
+    }
 
     imgAFR->load(s);
 }
@@ -457,30 +474,51 @@ void QucsActiveFilter::slotUpdateSchematic()
     // provide a default for cases not defined below (transient)
     QString s = ":/images/bitmaps/mfb-lowpass.svg";
     switch (cbxFilterType->currentIndex()) {
-    case topoCauer : if ((ftyp==Filter::BandStop)||
-                         (ftyp==Filter::BandPass)) {
-            s = ":images/bitmaps/cauer-bandpass.svg"; // Cauer section
-        } else {
-            s = ":images/bitmaps/cauer.svg"; // Cauer section
-        }
-             break;
-    case topoMFB : if (ftyp==Filter::HighPass) { // Multifeedback
-            s = ":/images/bitmaps/mfb-highpass.svg";
-        } else if (ftyp==Filter::LowPass) {
-            s = ":/images/bitmaps/mfb-lowpass.svg";
-        } else if (ftyp==Filter::BandPass) {
-            s = ":/images/bitmaps/mfb-bandpass.svg";
-        }
-             break;
-    case topoSallenKey : if (ftyp==Filter::HighPass) { // Sallen-Key
-            s = ":/images/bitmaps/sk-highpass.svg";
-        } else if (ftyp==Filter::LowPass) {
-           s = ":/images/bitmaps/sk-lowpass.svg";
-        } else if (ftyp==Filter::BandPass) {
-           s = ":/images/bitmaps/sk-bandpass.svg";
-        }
+        case topoCauer:
+            switch (ftyp) {
+                case Filter::BandStop: [[fallthrough]];
+                case Filter::BandPass:
+                    s = ":images/bitmaps/cauer-bandpass.svg";
+                break;
+                default:
+                    s = ":images/bitmaps/cauer.svg";
+                break;
+            }
         break;
-    default : s = ":/images/bitmaps/mfb-lowpass.svg";
+        case topoMFB:
+            switch (ftyp) {
+                case Filter::HighPass:
+                    s = ":/images/bitmaps/mfb-highpass.svg";
+                break;
+                case Filter::LowPass:
+                    s = ":/images/bitmaps/mfb-lowpass.svg";
+                break;
+                case Filter::BandPass:
+                    s = ":/images/bitmaps/mfb-bandpass.svg";
+                break;
+                default:
+                    // Nothing to do
+                break;
+            }
+        break;
+        case topoSallenKey:
+            switch (ftyp) {
+                case Filter::HighPass:
+                    s = ":/images/bitmaps/sk-highpass.svg";
+                break;
+                case Filter::LowPass:
+                    s = ":/images/bitmaps/sk-lowpass.svg";
+                break;
+                case Filter::BandPass:
+                    s = ":/images/bitmaps/sk-bandpass.svg";
+                break;
+                default:
+                    // Nothing to do
+                break;
+            }
+        break;
+        default:
+            s = ":/images/bitmaps/mfb-lowpass.svg";
         break;
     }
 
@@ -489,18 +527,17 @@ void QucsActiveFilter::slotUpdateSchematic()
 
 void QucsActiveFilter::slotSwitchParameters()
 {
-    if ((cbxFilterFunc->currentIndex()==funcCauer)||
-        (cbxFilterFunc->currentIndex()==funcInvChebyshev)||
-        (cbxResponse->currentIndex()==tBandStop)) { // Inverse Chebyshev
-                                                                                  // or Cauer
+    if ((cbxFilterFunc->currentIndex()==funcCauer) ||           // Cauer
+        (cbxFilterFunc->currentIndex()==funcInvChebyshev) ||    // Inv.Chebyshev
+        (cbxResponse->currentIndex()==tBandStop)) {
         cbxFilterType->setDisabled(true);
     } else {
         cbxFilterType->setDisabled(false);
     }
 
-    if ((cbxFilterFunc->currentIndex()==funcInvChebyshev)||  // Inv.Chebyshev
-        (cbxFilterFunc->currentIndex()==funcCauer)||  // Cauer
-        (cbxFilterFunc->currentIndex()==funcUser)|| // or User defined
+    if ((cbxFilterFunc->currentIndex()==funcInvChebyshev) ||    // Inv.Chebyshev
+        (cbxFilterFunc->currentIndex()==funcCauer) ||           // Cauer
+        (cbxFilterFunc->currentIndex()==funcUser) ||            // or User defined
         (cbxResponse->currentIndex()==tBandStop))
     {
         cbxFilterType->addItem(tr("Cauer section"),Qt::DisplayRole);

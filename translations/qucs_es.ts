@@ -9286,7 +9286,7 @@ Enables/disables the filter calculation console</source>
         <location line="+141"/>
         <location line="+23"/>
         <location line="+21"/>
-        <source>Unable to implement filter with such parameters and topology 
+        <source>Unable to implement filter with such parameters and topology
 Change parameters and/or topology and try again!</source>
         <translation type="unfinished"></translation>
     </message>

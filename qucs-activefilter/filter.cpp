@@ -121,20 +121,27 @@ void Filter::calcFilter()
     Zeros.clear();
 
     switch (ffunc) {
-    case Filter::Chebyshev : calcChebyshev();
+        case Filter::Chebyshev:
+            calcChebyshev();
         break;
-    case Filter::Butterworth : calcButterworth();
+        case Filter::Butterworth:
+            calcButterworth();
         break;
-    case Filter::Cauer : calcCauer();
+        case Filter::Cauer:
+            calcCauer();
         break;
-    case Filter::InvChebyshev : calcInvChebyshev();
+        case Filter::InvChebyshev:
+            calcInvChebyshev();
         break;
-    case Filter::Bessel : calcBessel();
+        case Filter::Bessel:
+            calcBessel();
         break;
-    case Filter::User : calcUserTrFunc();
+        case Filter::User:
+            calcUserTrFunc();
         break;
-    default :
-        throw FilterError("Internal error: unknown filter function");
+        default:
+            throw FilterError("Internal error: unknown filter function");
+        break;
     }
 
     if (Poles.isEmpty()) {
@@ -151,15 +158,19 @@ void Filter::calcFilter()
     }
 
     switch (ftype) {
-    case Filter::LowPass : calcLowPass();
+        case Filter::LowPass:
+            calcLowPass();
         break;
-    case Filter::HighPass : calcHighPass();
+        case Filter::HighPass:
+            calcHighPass();
         break;
-    case Filter::BandPass : calcBandPass();
+        case Filter::BandPass:
+            calcBandPass();
         break;
-    case Filter::BandStop : calcBandStop();
+        case Filter::BandStop:
+            calcBandStop();
         break;
-    default:
+        default:
             throw FilterError("Internal error: unknown filter type");
         break;
     }

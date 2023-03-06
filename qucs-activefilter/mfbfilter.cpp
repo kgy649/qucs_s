@@ -19,7 +19,6 @@
 # include <config.h>
 #endif
 
-
 #include "mfbfilter.h"
 
 MFBfilter::MFBfilter(Filter::FilterFunc ffunc_, Filter::FType type_, FilterParam par)
@@ -306,7 +305,8 @@ void MFBfilter::calcFirstOrder()
         return;
     }
 
-    double  R1,R2;
+    double R1;
+    double R2;
 
     int k = order/2 + 1;
     double  Wc = 2*pi*Fc;
@@ -353,9 +353,8 @@ void MFBfilter::calcLowPass()
         // the following is the general expression for C2
         //R2 = (2*(Kv1+1))/(Wc*(B*C2+sqrt(B*B*C2*C2-4*C*C1*C2*(Kv+1))));
         // with C1 assigned as above, this simplifies to
-        R2 = (2*(Kv1+1))/(Wc*B*C2*(1+sqrt((Kv1-Kv)/(Kv1+1))));
-        // simplification above avoids negative argument to sqrt() due
-        //   to numerical errors
+        R2 = (2*(Kv1+1))/(Wc*B*C2*(1+sqrt((Kv-Kv1)/(Kv1+1))));
+        // simplification above avoids negative argument to sqrt() due to numerical errors
         R1 = R2/Kv1;
         R3 = 1.0/(C*C1*C2*Wc*Wc*R2);
 
